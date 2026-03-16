@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Practice - Onsite Trip</title>
+    <meta name="description" content="Practice English conversations and vocabulary for your onsite business trip">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo">
+                    <span class="logo-icon">🌍</span>
+                    <h1>English Practice</h1>
+                </div>
+                <p class="subtitle">Luyện tập tiếng Anh cho chuyến onsite</p>
+            </div>
+            <!-- Daily 100 Challenge Button -->
+        <div style="text-align:center;margin-bottom:16px;">
+            <button class="daily-challenge-btn" id="dailyChallengeBtn" onclick="app.openDailyChallenge()">
+                🔥 Daily 100 — Học 100 từ hôm nay (Ngày <span id="dayNumber">1</span>/10)
+            </button>
+        </div>
+
+        <div class="header-stats" id="headerStats">
+            <div class="stat-item">
+                <span class="stat-number" id="totalWords">0</span>
+                <span class="stat-label">Từ vựng</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="totalDialogs">0</span>
+                <span class="stat-label">Hội thoại</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" id="learnedCount">0</span>
+                    <span class="stat-label">Đã học</span>
+                </div>
+            </div>
+            <div class="voice-controls">
+                <label class="voice-label">🔊</label>
+                <select id="voiceSelect" class="voice-select" onchange="app.changeVoice()"></select>
+                <label class="voice-label">🐢</label>
+                <input type="range" id="voiceSpeed" class="voice-speed" min="0.5" max="1.5" step="0.05" value="0.85" onchange="app.changeSpeed(this.value)">
+                <label class="voice-label">🐇</label>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="category-nav">
+            <button class="nav-tab active" data-category="airport" id="tab-airport">
+                <span class="tab-icon">✈️</span>
+                <span class="tab-label">Sân bay</span>
+            </button>
+            <button class="nav-tab" data-category="office" id="tab-office">
+                <span class="tab-icon">🏢</span>
+                <span class="tab-label">Văn phòng</span>
+            </button>
+            <button class="nav-tab" data-category="canteen" id="tab-canteen">
+                <span class="tab-icon">🍽️</span>
+                <span class="tab-label">Căn tin</span>
+            </button>
+            <button class="nav-tab" data-category="daily" id="tab-daily">
+                <span class="tab-icon">🌆</span>
+                <span class="tab-label">Hàng ngày</span>
+            </button>
+            <button class="nav-tab" data-category="general1" id="tab-general1">
+                <span class="tab-icon">📝</span>
+                <span class="tab-label">Động từ</span>
+            </button>
+            <button class="nav-tab" data-category="general2" id="tab-general2">
+                <span class="tab-icon">📚</span>
+                <span class="tab-label">Tính từ</span>
+            </button>
+            <button class="nav-tab" data-category="general3" id="tab-general3">
+                <span class="tab-icon">💻</span>
+                <span class="tab-label">Công nghệ</span>
+            </button>
+            <button class="nav-tab" data-category="general4" id="tab-general4">
+                <span class="tab-icon">🏥</span>
+                <span class="tab-label">Sức khỏe</span>
+            </button>
+            <button class="nav-tab" data-category="general5" id="tab-general5">
+                <span class="tab-icon">🍲</span>
+                <span class="tab-label">Ẩm thực</span>
+            </button>
+            <button class="nav-tab" data-category="general6" id="tab-general6">
+                <span class="tab-icon">🗣️</span>
+                <span class="tab-label">Giao tiếp</span>
+            </button>
+            <button class="nav-tab" data-category="general7" id="tab-general7">
+                <span class="tab-icon">💼</span>
+                <span class="tab-label">Công việc</span>
+            </button>
+        </nav>
+
+        <!-- Mode Selector -->
+        <div class="mode-selector">
+            <button class="mode-btn active" data-mode="vocabulary" id="mode-vocabulary">
+                <span class="mode-icon">📖</span> Từ vựng
+            </button>
+            <button class="mode-btn" data-mode="conversation" id="mode-conversation">
+                <span class="mode-icon">💬</span> Hội thoại
+            </button>
+            <button class="mode-btn" data-mode="quiz" id="mode-quiz">
+                <span class="mode-icon">🎯</span> Kiểm tra
+            </button>
+            <button class="mode-btn" data-mode="phrases" id="mode-phrases">
+                <span class="mode-icon">📝</span> Mẫu câu
+            </button>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent">
+            <!-- Content rendered by JS -->
+        </main>
+    </div>
+
+    <!-- Daily Challenge Overlay -->
+    <div class="daily-overlay" id="dailyOverlay">
+        <div class="daily-header">
+            <div class="daily-title">🔥 <span id="dailyTitleText">Daily 100</span></div>
+            <div class="daily-header-actions">
+                <button class="auto-read-btn" id="dailyAutoReadBtn" onclick="app.autoReadDaily()">▶️ Đọc tự động</button>
+                <button class="daily-test-btn" id="dailyTestBtn" onclick="app.startDailyTest()" style="display:none">📝 Kiểm tra</button>
+                <button class="daily-close-btn" onclick="app.closeDailyChallenge()">✕ Đóng</button>
+            </div>
+        </div>
+        <div class="daily-stats-bar" id="dailyStatsBar"></div>
+        <div class="daily-progress-bar">
+            <div class="daily-progress-fill" id="dailyProgressFill" style="width:0%"></div>
+        </div>
+        <div class="daily-vocab-grid" id="dailyVocabGrid"></div>
+        <div class="daily-test-container" id="dailyTestContainer" style="display:none"></div>
+    </div>
+
+    <!-- AI Chat Button -->
+    <button class="chat-fab" id="chatFab" onclick="app.toggleChat()">🤖</button>
+
+    <!-- AI Chat Panel -->
+    <div class="chat-panel" id="chatPanel">
+        <div class="chat-header">
+            <span>🤖 AI English Tutor</span>
+            <button class="chat-close" onclick="app.toggleChat()">✕</button>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="chat-msg bot">
+                <div class="chat-bubble">👋 Xin chào! Tôi là AI English Tutor. Hãy nói chuyện tiếng Anh với tôi nhé! 
+                <br><br>💡 Bạn có thể:
+                <br>• Hỏi nghĩa từ vựng
+                <br>• Luyện đặt câu
+                <br>• Nhờ sửa lỗi ngữ pháp
+                <br>• Tập hội thoại theo tình huống</div>
+            </div>
+        </div>
+        <div class="chat-suggestions" id="chatSuggestions">
+            <button onclick="app.aiRoleplay()">🎭 Roleplay</button>
+            <button onclick="app.aiExercise()">📝 Bài tập</button>
+            <button onclick="app.aiStory()">📖 Viết truyện</button>
+            <button onclick="app.sendSuggestion('Correct my English: I go to school yesterday')">✏️ Sửa lỗi</button>
+            <button onclick="app.sendSuggestion('Teach me 5 common greetings')">👋 Greetings</button>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" class="chat-input" placeholder="Nhập tin nhắn..."
+                   onkeydown="if(event.key==='Enter') app.sendChat()">
+            <button class="chat-send" onclick="app.sendChat()">➤</button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <span class="toast-icon">✅</span>
+        <span class="toast-message" id="toastMessage"></span>
+    </div>
+
+    <script src="data-airport.js"></script>
+    <script src="data-office.js"></script>
+    <script src="data-canteen.js"></script>
+    <script src="data-daily.js"></script>
+    <script src="data-general-1.js"></script>
+    <script src="data-general-2.js"></script>
+    <script src="data-general-3.js"></script>
+    <script src="data-general-4.js"></script>
+    <script src="data-general-5.js"></script>
+    <script src="data-general-6.js"></script>
+    <script src="data-general-7.js"></script>
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
