@@ -899,6 +899,133 @@ button, a, select {
 }
 
 /* ============================================
+   PRACTICE WRITING
+   ============================================ */
+.practice-write-area {
+  margin-top: 8px;
+}
+
+.practice-write-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.practice-write-input {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 2px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  transition: all 0.3s;
+}
+
+.practice-write-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 12px var(--accent-glow);
+  outline: none;
+}
+
+.practice-write-input::placeholder {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.practice-write-check {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, var(--accent-green), #00c853);
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.practice-write-check:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 12px var(--accent-green-glow);
+}
+
+.write-result {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  animation: fadeIn 0.3s ease;
+}
+
+.write-result.good {
+  background: var(--accent-green-glow);
+  border: 1px solid rgba(0, 230, 118, 0.3);
+}
+
+.write-result.bad {
+  background: rgba(255, 71, 87, 0.12);
+  border: 1px solid rgba(255, 71, 87, 0.3);
+}
+
+.write-result-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.write-result-score {
+  font-size: 18px;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.write-result.good .write-result-score { color: var(--accent-green); }
+.write-result.bad .write-result-score { color: var(--accent-red); }
+
+.write-result-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.write-result-line {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.write-label {
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-right: 6px;
+  font-size: 11px;
+}
+
+.write-word-correct {
+  color: var(--accent-green);
+  font-weight: 600;
+}
+
+.write-word-wrong {
+  color: var(--accent-red);
+  text-decoration: line-through;
+  font-weight: 500;
+}
+
+.write-word-missing {
+  color: var(--accent-orange);
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+/* ============================================
    VOCABULARY SECTION
    ============================================ */
 .vocab-table {

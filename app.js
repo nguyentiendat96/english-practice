@@ -459,7 +459,7 @@ Make the dialogue feel like a REAL conversation.`;
     `;
   }
 
-  // --- 🇻🇳 Practice Tab: See Vietnamese, speak English, get scored ---
+  // --- 🇻🇳 Practice Tab: See Vietnamese, speak/write English, get scored ---
   function renderPracticeSection(container, data) {
     const enLines = data.dialogue_en || [];
     const viLines = data.dialogue_vi || [];
@@ -467,7 +467,7 @@ Make the dialogue feel like a REAL conversation.`;
     container.innerHTML = `
       <div class="dbd-section">
         <div style="padding:8px 16px;margin-bottom:8px;font-size:13px;color:var(--text-muted);background:var(--bg-card);border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">
-          🎯 <strong>Bước 2:</strong> Đọc câu tiếng Việt → Bấm 🎙️ nói lại bằng tiếng Anh → xem điểm. Hoặc bấm <strong>"🎤 Auto Practice"</strong> để luyện tự động.
+          🎯 <strong>Bước 2:</strong> Đọc câu tiếng Việt → <strong>Viết lại</strong> bằng tiếng Anh hoặc bấm 🎙️ nói → xem điểm.
         </div>
         <div style="text-align:center;margin-bottom:12px;">
           <button class="dbd-action-btn active" onclick="app.startPractice()" id="autoPracticeBtn" style="padding:10px 24px;font-size:14px;">🎤 Auto Practice</button>
@@ -487,6 +487,16 @@ Make the dialogue feel like a REAL conversation.`;
                 <div class="dialogue-content">
                   <div class="dialogue-name">${speakerName}</div>
                   <div class="dialogue-vi" style="display:block;font-style:normal;color:var(--text-primary);font-size:14px;">🇻🇳 ${viText}</div>
+                  <div class="practice-write-area" id="write-area-${i}">
+                    <div class="practice-write-row">
+                      <input type="text" class="practice-write-input" id="write-input-${i}" 
+                             placeholder="Viết lại bằng tiếng Anh..." 
+                             autocomplete="off" spellcheck="false"
+                             onkeydown="if(event.key==='Enter') app.checkWriting(${i})">
+                      <button class="practice-write-check" onclick="app.checkWriting(${i})" title="Kiểm tra">✅</button>
+                    </div>
+                    <div id="write-result-${i}"></div>
+                  </div>
                   <div class="dialogue-en practice-hidden" id="en-reveal-${i}" style="display:none;margin-top:6px;padding:6px 10px;background:rgba(108,92,231,0.1);border-radius:6px;font-size:13px;color:var(--accent-secondary);">🇬🇧 ${enText}</div>
                   <div id="score-${i}"></div>
                 </div>
@@ -1180,6 +1190,69 @@ Make the dialogue feel like a REAL conversation.`;
   }
 
   // ============================================
+  // CHECK WRITING
+  // ============================================
+  function checkWriting(index) {
+    const input = document.getElementById(`write-input-${index}`);
+    const resultDiv = document.getElementById(`write-result-${index}`);
+    const turn = document.getElementById(`turn-${index}`);
+    if (!input || !resultDiv || !turn) return;
+
+    const typed = input.value.trim();
+    if (!typed) { showToast('✍️ Hãy viết câu tiếng Anh trước!'); return; }
+
+    const expected = (turn.getAttribute('data-en') || '').trim();
+    const score = calculateScore(typed, expected);
+
+    // Word-level diff
+    const typedWords = typed.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/);
+    const expectedWords = expected.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/);
+
+    // Build highlighted expected
+    const highlightedExpected = expectedWords.map(word => {
+      const found = typedWords.includes(word);
+      return found
+        ? `<span class="write-word-correct">${word}</span>`
+        : `<span class="write-word-missing">${word}</span>`;
+    }).join(' ');
+
+    // Build highlighted typed
+    const highlightedTyped = typedWords.map(word => {
+      const found = expectedWords.includes(word);
+      return found
+        ? `<span class="write-word-correct">${word}</span>`
+        : `<span class="write-word-wrong">${word}</span>`;
+    }).join(' ');
+
+    const isGood = score >= 70;
+    turn.classList.remove('scored-good', 'scored-bad');
+    turn.classList.add(isGood ? 'scored-good' : 'scored-bad');
+
+    resultDiv.innerHTML = `
+      <div class="write-result ${isGood ? 'good' : 'bad'}">
+        <div class="write-result-header">
+          <span class="write-result-score">${score}%</span>
+          <span>${isGood ? '✅ Tốt lắm!' : '❌ Thử lại nhé!'}</span>
+        </div>
+        <div class="write-result-detail">
+          <div class="write-result-line">
+            <span class="write-label">Bạn viết:</span>
+            <span>${highlightedTyped}</span>
+          </div>
+          <div class="write-result-line">
+            <span class="write-label">Đáp án:</span>
+            <span>${highlightedExpected}</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Disable input after check
+    input.disabled = true;
+    input.style.opacity = '0.6';
+  }
+
+  // ============================================
   // UTILITIES
   // ============================================
   function escapeQuotes(str) {
@@ -1219,6 +1292,7 @@ Make the dialogue feel like a REAL conversation.`;
     recordTurn,
     startPractice,
     revealEnglish,
+    checkWriting,
     loadHistory,
     deleteHistory,
     backToHome,
