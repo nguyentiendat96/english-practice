@@ -30,33 +30,29 @@
   function init() {
     loadVoices();
     renderHistory();
-    // Focus command input
-    const cmdInput = document.getElementById('commandInput');
-    if (cmdInput) cmdInput.focus();
   }
 
   // ============================================
   // COMMAND HANDLING
   // ============================================
   function executeCommand() {
-    const input = document.getElementById('commandInput');
-    if (!input) return;
-    let cmd = input.value.trim();
-    if (!cmd) return;
-    
-    // Add / prefix if missing
-    if (!cmd.startsWith('/')) cmd = '/' + cmd;
-    
+    const topicSelect = document.getElementById('topicSelect');
+    const levelSelect = document.getElementById('levelSelect');
+    if (!topicSelect || !levelSelect) return;
+
+    const type = topicSelect.value;
+    const level = levelSelect.value;
+    const cmd = `/${type} ${level}`;
     currentCommand = cmd;
     generateDBD(cmd);
   }
 
   function quickCommand(type, level) {
-    const cmd = `/${type} ${level}`;
-    const input = document.getElementById('commandInput');
-    if (input) input.value = `${type} ${level}`;
-    currentCommand = cmd;
-    generateDBD(cmd);
+    const topicSelect = document.getElementById('topicSelect');
+    const levelSelect = document.getElementById('levelSelect');
+    if (topicSelect) topicSelect.value = type;
+    if (levelSelect) levelSelect.value = level;
+    executeCommand();
   }
 
   // ============================================
@@ -897,13 +893,19 @@ Make the dialogue feel like a REAL conversation.`;
     if (!item || !item.data) return;
     currentData = item.data;
     currentCommand = item.command;
-    const input = document.getElementById('commandInput');
-    if (input) input.value = item.command.replace(/^\//, '');
+    // Set combobox values from command
+    const match = item.command.match(/^\/?(\w+)\s+(\w+)/);
+    if (match) {
+      const ts = document.getElementById('topicSelect');
+      const ls = document.getElementById('levelSelect');
+      if (ts) ts.value = match[1];
+      if (ls) ls.value = match[2];
+    }
 
     welcomeScreen.style.display = 'none';
     loadingScreen.style.display = 'none';
     dbdResult.style.display = 'block';
-    activeTab = 'dialogue';
+    activeTab = 'english';
     renderDBDResult(item.data);
   }
 

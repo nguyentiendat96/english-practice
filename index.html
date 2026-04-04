@@ -34,55 +34,34 @@
         <!-- Command Bar -->
         <div class="command-bar" id="commandBar">
             <div class="command-input-wrap">
-                <span class="command-prefix">/</span>
-                <input type="text" id="commandInput" class="command-input" 
-                       placeholder="it a1, gt b1, daily a2, office b2..."
-                       autocomplete="off" spellcheck="false"
-                       onkeydown="if(event.key==='Enter') app.executeCommand()">
+                <select id="topicSelect" class="command-select">
+                    <option value="it">💻 IT / Công nghệ</option>
+                    <option value="gt" selected>🗣️ Giao tiếp</option>
+                    <option value="daily">🌅 Hàng ngày</option>
+                    <option value="office">🏢 Văn phòng</option>
+                    <option value="airport">✈️ Sân bay</option>
+                    <option value="food">🍜 Ẩm thực</option>
+                    <option value="health">🏥 Sức khỏe</option>
+                    <option value="business">💼 Kinh doanh</option>
+                    <option value="shopping">🛒 Mua sắm</option>
+                    <option value="travel">🌍 Du lịch</option>
+                    <option value="school">🎒 Trường học</option>
+                    <option value="sport">⚽ Thể thao</option>
+                    <option value="movie">🎬 Phim ảnh</option>
+                    <option value="music">🎵 Âm nhạc</option>
+                    <option value="family">👨‍👩‍👧 Gia đình</option>
+                    <option value="interview">🎯 Phỏng vấn</option>
+                </select>
+                <select id="levelSelect" class="command-select">
+                    <option value="a1">A1 — Beginner</option>
+                    <option value="a2">A2 — Elementary</option>
+                    <option value="b1" selected>B1 — Intermediate</option>
+                    <option value="b2">B2 — Upper-Int</option>
+                </select>
                 <button class="command-go-btn" id="commandGoBtn" onclick="app.executeCommand()">
                     <span>Generate</span>
                     <span class="cmd-arrow">→</span>
                 </button>
-            </div>
-            <div class="command-quick">
-                <span class="quick-label">Quick:</span>
-                <button class="quick-btn" onclick="app.quickCommand('it','a1')">💻 IT A1</button>
-                <button class="quick-btn" onclick="app.quickCommand('it','b1')">💻 IT B1</button>
-                <button class="quick-btn" onclick="app.quickCommand('gt','a1')">🗣️ GT A1</button>
-                <button class="quick-btn" onclick="app.quickCommand('gt','b1')">🗣️ GT B1</button>
-                <button class="quick-btn" onclick="app.quickCommand('daily','a2')">🌅 Daily A2</button>
-                <button class="quick-btn" onclick="app.quickCommand('office','b1')">🏢 Office B1</button>
-                <button class="quick-btn" onclick="app.quickCommand('business','b2')">💼 Business B2</button>
-                <button class="quick-btn" onclick="app.quickCommand('interview','b1')">🎯 Interview B1</button>
-            </div>
-            <div class="command-help">
-                <details>
-                    <summary>📖 Hướng dẫn lệnh</summary>
-                    <div class="help-grid">
-                        <div class="help-col">
-                            <h4>Loại hình</h4>
-                            <code>it</code> IT/Công nghệ<br>
-                            <code>gt</code> Giao tiếp<br>
-                            <code>daily</code> Hàng ngày<br>
-                            <code>office</code> Văn phòng<br>
-                            <code>airport</code> Sân bay<br>
-                            <code>food</code> Ẩm thực<br>
-                            <code>health</code> Sức khỏe<br>
-                            <code>business</code> Kinh doanh<br>
-                            <code>interview</code> Phỏng vấn<br>
-                            <code>shopping</code> Mua sắm<br>
-                            <code>travel</code> Du lịch<br>
-                            <code>school</code> Trường học<br>
-                        </div>
-                        <div class="help-col">
-                            <h4>Trình độ</h4>
-                            <code>a1</code> Beginner<br>
-                            <code>a2</code> Elementary<br>
-                            <code>b1</code> Intermediate<br>
-                            <code>b2</code> Upper-Int<br>
-                        </div>
-                    </div>
-                </details>
             </div>
         </div>
 
