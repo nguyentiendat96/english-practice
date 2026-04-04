@@ -61,8 +61,31 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100vh;
+  min-height: -webkit-fill-available;
   -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
   overflow-x: hidden;
+  /* Safe area for notched iPhones */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+html {
+  height: -webkit-fill-available;
+}
+
+/* Prevent iOS zoom on input focus */
+input, select, textarea {
+  font-size: 16px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Better touch targets */
+button, a, select {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 /* Scrollbar */
@@ -1273,31 +1296,175 @@ body {
 /* ============================================
    RESPONSIVE
    ============================================ */
+
+/* Tablet */
 @media (max-width: 768px) {
   .app-container { padding: 0 10px 80px; }
   .logo h1 { font-size: 22px; }
-  .command-input { font-size: 14px; }
-  .command-go-btn { padding: 10px 16px; font-size: 13px; }
-  .command-quick { gap: 6px; }
-  .quick-btn { font-size: 11px; padding: 4px 10px; }
-  .dbd-tabs { flex-wrap: wrap; }
-  .dbd-tab { font-size: 12px; padding: 8px 10px; }
+
+  /* Command bar: stack selects in 2x2 grid */
+  .command-input-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .command-select { font-size: 14px; padding: 12px 14px; }
+  .command-go-btn {
+    grid-column: 1 / -1;
+    justify-content: center;
+    padding: 12px 16px;
+    font-size: 14px;
+    border-radius: var(--radius-md);
+  }
+
+  /* Tabs */
+  .dbd-tabs { flex-wrap: wrap; gap: 4px; }
+  .dbd-tab { font-size: 12px; padding: 8px 10px; flex: 0 0 auto; }
+
+  /* Cards */
   .tense-cards, .grammar-cards { grid-template-columns: 1fr; }
+
+  /* Header */
   .dbd-header { flex-direction: column; gap: 12px; }
-  .dbd-header-actions { width: 100%; justify-content: center; }
+  .dbd-header-actions { width: 100%; justify-content: center; flex-wrap: wrap; }
+
+  /* Chat */
   .chat-panel { width: calc(100vw - 20px); right: 10px; bottom: 10px; height: 60vh; }
+
+  /* Welcome */
   .welcome-examples { grid-template-columns: repeat(2, 1fr); }
-  .help-grid { flex-direction: column; gap: 16px; }
-  .voice-controls { flex-wrap: wrap; justify-content: center; }
+
+  /* Voice */
+  .voice-controls { flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .voice-select { max-width: 160px; font-size: 11px; }
+
+  /* Practice */
   .practice-summary-bar { flex-direction: column; gap: 12px; text-align: center; }
+
+  /* Dialogue */
+  .dialogue-en { font-size: 13px; }
+  .dialogue-vi { font-size: 12px; }
+  .dialogue-actions { gap: 3px; }
+  .dialogue-btn { width: 30px; height: 30px; font-size: 13px; }
 }
 
+/* Mobile */
 @media (max-width: 480px) {
+  .app-container { padding: 0 8px 70px; }
   .logo h1 { font-size: 20px; }
   .logo-icon { font-size: 28px; }
-  .welcome-examples { grid-template-columns: repeat(2, 1fr); }
-  .dialogue-turn { padding: 10px 12px; }
-  .dialogue-avatar { width: 30px; height: 30px; font-size: 12px; }
+  .subtitle { font-size: 12px; }
+
+  /* Command bar: full stack */
+  .command-bar { padding: 10px; }
+  .command-input-wrap {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .command-select {
+    font-size: 13px;
+    padding: 10px 10px;
+    /* Prevent iOS Safari zoom on focus */
+    font-size: 16px;
+  }
+  .command-select-sm {
+    min-width: 0;
+    max-width: none;
+  }
+  .command-go-btn {
+    padding: 12px;
+    font-size: 14px;
+  }
+
+  /* Welcome */
+  .welcome-screen { padding: 30px 10px; }
+  .welcome-screen h2 { font-size: 20px; }
+  .welcome-screen p { font-size: 13px; }
+  .welcome-icon { font-size: 48px; }
+  .welcome-examples { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .example-card { padding: 14px 10px; }
+  .example-icon { font-size: 22px; }
+  .example-text { font-size: 12px; }
+
+  /* Tabs: scroll horizontal */
+  .dbd-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 3px;
+    gap: 3px;
+  }
+  .dbd-tabs::-webkit-scrollbar { display: none; }
+  .dbd-tab {
+    font-size: 11px;
+    padding: 8px 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Dialogue */
+  .dialogue-turn { padding: 10px 10px; gap: 8px; }
+  .dialogue-avatar { width: 28px; height: 28px; font-size: 11px; }
+  .dialogue-name { font-size: 10px; }
+  .dialogue-en { font-size: 13px; line-height: 1.5; }
+  .dialogue-vi { font-size: 12px; }
+  .dialogue-actions { flex-direction: column; gap: 3px; }
+  .dialogue-btn { width: 28px; height: 28px; font-size: 12px; }
+
+  /* Result header */
+  .dbd-header { padding: 12px; }
+  .dbd-header-left h2 { font-size: 15px; }
+  .dbd-header-meta { flex-wrap: wrap; gap: 6px; }
+  .dbd-meta-tag { font-size: 11px; padding: 2px 8px; }
+  .dbd-action-btn { font-size: 11px; padding: 6px 10px; }
+
+  /* Vocab table */
+  .vocab-table { font-size: 12px; }
+  .vocab-table th, .vocab-table td { padding: 8px 6px; }
+
+  /* History */
+  .history-item { padding: 10px 12px; }
+  .history-cmd { font-size: 12px; }
+  .history-title { font-size: 12px; }
+  .history-item-left { gap: 8px; }
+
+  /* Voice controls */
+  .voice-controls {
+    padding: 6px 10px;
+    gap: 4px;
+    border-radius: var(--radius-md);
+  }
+  .voice-label { font-size: 12px; }
+  .voice-select {
+    max-width: 130px;
+    font-size: 16px; /* prevent iOS zoom */
+    padding: 3px 6px;
+  }
+  .voice-speed { width: 60px; }
+
+  /* Chat */
+  .chat-panel {
+    width: calc(100vw - 16px);
+    right: 8px;
+    bottom: 8px;
+    height: 55vh;
+    border-radius: var(--radius-md);
+  }
+  .chat-fab { width: 44px; height: 44px; font-size: 20px; }
+
+  /* Settings modal */
+  .settings-modal { padding: 20px; }
+  .settings-modal h3 { font-size: 16px; }
+  .settings-input { font-size: 16px; padding: 10px 12px; }
+
+  /* Practice summary */
+  .practice-summary-bar { padding: 12px; }
+  .practice-avg-score { font-size: 24px !important; }
+
+  /* Loading */
+  .loading-text { font-size: 16px; }
+  .loading-sub { font-size: 12px; }
 }
 
 /* ============================================
