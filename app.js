@@ -431,11 +431,45 @@ Make the dialogue feel like a REAL conversation.`;
   function renderEnglishSection(container, data) {
     const enLines = data.dialogue_en || [];
     const viLines = data.dialogue_vi || [];
+    const tenses = data.tenses || [];
+    const grammar = data.grammar || [];
+    const connectors = data.connectors || [];
+
+    // Build per-sentence analysis
+    function findAnalysis(sentenceText) {
+      const lower = sentenceText.toLowerCase();
+      const parts = [];
+
+      // Match tenses
+      tenses.forEach(t => {
+        if (t.example && lower.includes(t.example.toLowerCase().substring(0, 15))) {
+          parts.push(`<span class="inline-tag tense-tag">⏰ ${t.tense}</span>`);
+        }
+      });
+
+      // Match connectors
+      connectors.forEach(c => {
+        const word = (c.word || '').toLowerCase();
+        const regex = new RegExp('\\b' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+        if (regex.test(sentenceText)) {
+          parts.push(`<span class="inline-tag connector-tag">🔗 ${c.word} <small>(${c.type_vi || c.type || ''})</small></span>`);
+        }
+      });
+
+      // Match grammar
+      grammar.forEach(g => {
+        if (g.example_en && lower.includes(g.example_en.toLowerCase().substring(0, 12))) {
+          parts.push(`<span class="inline-tag grammar-tag">📝 ${g.type}</span>`);
+        }
+      });
+
+      return parts.join(' ');
+    }
 
     container.innerHTML = `
       <div class="dbd-section">
         <div style="padding:8px 16px;margin-bottom:8px;font-size:13px;color:var(--text-muted);background:var(--bg-card);border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">
-          💡 <strong>Bước 1:</strong> Đọc và nghe hội thoại tiếng Anh. Bấm 🔊 để nghe, bấm 🇻🇳 để xem nghĩa. Sau đó chuyển sang tab <strong>🇻🇳 Luyện dịch</strong>.
+          💡 <strong>Bước 1:</strong> Bấm vào câu để xem nghĩa tiếng Việt + phân tích ngữ pháp. Bấm 🔊 để nghe.
         </div>
         <div class="dialogue-container" id="dialogueContainer">
           ${enLines.map((line, i) => {
@@ -446,6 +480,7 @@ Make the dialogue feel like a REAL conversation.`;
             const cleanEn = enText.replace(/\*\*/g, '');
             const displayEn = enText.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
             const viText = viLines[i] ? (viLines[i].text || '').replace(/\*\*/g, '') : '';
+            const analysis = findAnalysis(cleanEn);
 
             return `
               <div class="dialogue-turn ${speakerClass} clickable-row" id="turn-${i}" data-en="${escapeAttr(cleanEn)}" onclick="app.toggleVi(${i})">
@@ -453,7 +488,10 @@ Make the dialogue feel like a REAL conversation.`;
                 <div class="dialogue-content">
                   <div class="dialogue-name">${speakerName}</div>
                   <div class="dialogue-en">${displayEn}</div>
-                  <div class="dialogue-vi-toggle" id="vi-toggle-${i}" style="display:none;margin-top:4px;font-size:13px;color:var(--text-muted);font-style:italic;padding:4px 8px;background:rgba(108,92,231,0.06);border-radius:6px;">🇻🇳 ${viText}</div>
+                  <div class="dialogue-detail" id="vi-toggle-${i}" style="display:none;">
+                    <div class="detail-vi">🇻🇳 ${viText}</div>
+                    ${analysis ? `<div class="detail-tags">${analysis}</div>` : ''}
+                  </div>
                 </div>
                 <div class="dialogue-actions" onclick="event.stopPropagation()">
                   <button class="dialogue-btn" onclick="app.speak('${escapeQuotes(cleanEn)}')" title="Nghe">🔊</button>

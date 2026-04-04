@@ -798,6 +798,63 @@ button, a, select {
   flex-shrink: 0;
 }
 
+/* Dialogue detail panel (click to expand) */
+.dialogue-detail {
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: rgba(108, 92, 231, 0.06);
+  border-radius: 8px;
+  border-left: 3px solid var(--accent-primary);
+  animation: fadeIn 0.25s ease;
+}
+
+.detail-vi {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-bottom: 4px;
+}
+
+.detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.inline-tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.inline-tag small {
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+.tense-tag {
+  background: rgba(69, 170, 242, 0.15);
+  color: var(--accent-blue);
+  border: 1px solid rgba(69, 170, 242, 0.3);
+}
+
+.connector-tag {
+  background: rgba(255, 159, 67, 0.15);
+  color: var(--accent-orange);
+  border: 1px solid rgba(255, 159, 67, 0.3);
+}
+
+.grammar-tag {
+  background: rgba(0, 230, 118, 0.15);
+  color: var(--accent-green);
+  border: 1px solid rgba(0, 230, 118, 0.3);
+}
+
 .dialogue-btn {
   width: 32px;
   height: 32px;

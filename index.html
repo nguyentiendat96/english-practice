@@ -26,9 +26,16 @@
             <div class="voice-controls">
                 <label class="voice-label">🔊</label>
                 <select id="voiceSelect" class="voice-select" onchange="app.changeVoice()"></select>
-                <label class="voice-label">🐢</label>
-                <input type="range" id="voiceSpeed" class="voice-speed" min="0.5" max="1.5" step="0.05" value="0.85" onchange="app.changeSpeed(this.value)">
-                <label class="voice-label">🐇</label>
+                <label class="voice-label">⚡</label>
+                <select id="voiceSpeed" class="voice-select" onchange="app.changeSpeed(this.value)">
+                    <option value="0.5">0.5x Rất chậm</option>
+                    <option value="0.65">0.65x Chậm</option>
+                    <option value="0.75">0.75x Hơi chậm</option>
+                    <option value="0.85" selected>0.85x Bình thường</option>
+                    <option value="1.0">1.0x Nhanh</option>
+                    <option value="1.15">1.15x Hơi nhanh</option>
+                    <option value="1.3">1.3x Rất nhanh</option>
+                </select>
                 <button class="voice-label" style="cursor:pointer;background:none;border:none;font-size:18px;" onclick="app.promptApiKey()" title="API Key Settings">⚙️</button>
             </div>
         </header>
