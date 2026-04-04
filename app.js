@@ -242,7 +242,7 @@ Generate this EXACT JSON structure:
     {"word": "example", "ipa": "/ɪɡˈzæmpəl/", "meaning": "ví dụ", "example_en": "This is an example.", "example_vi": "Đây là một ví dụ."}
   ],
   "tenses": [
-    {"tense": "Present Simple", "example": "I work here", "usage": "Describe habits and routines", "structure": "S + V(s/es) + O"}
+    {"tense": "Present Simple", "example": "I work here (from dialogue line)", "example_vi": "Tôi làm việc ở đây", "usage": "Describe habits and routines", "usage_vi": "Mô tả thói quen và hoạt động thường xuyên", "structure": "S + V(s/es) + O", "explanation_vi": "Dùng khi nói về sự thật, thói quen lặp lại hoặc tình trạng chung."}
   ],
   "grammar": [
     {"type": "Giving opinion", "structure": "I think/believe + clause", "example_en": "I think this project is important.", "example_vi": "Tôi nghĩ dự án này quan trọng.", "explanation": "Used to express personal views"}
@@ -253,7 +253,7 @@ RULES:
 1. dialogue_en: Generate EXACTLY ${turns} turns total. ${sentenceLengthMap[sentenceLength] || sentenceLengthMap['medium']} Bold all verbs with **verb**. Make it realistic, connected, not robotic.
 2. dialogue_vi: Translate EXACTLY matching dialogue_en, natural Vietnamese style. Do NOT use ** in Vietnamese.
 3. vocabulary: Extract 8 important words from the dialogue.
-4. tenses: Analyze 4-5 main tenses used in the dialogue.
+4. tenses: Analyze 4-5 main tenses ACTUALLY USED in the dialogue. For each tense, "example" MUST be a real sentence quoted from the dialogue. Include Vietnamese translation (example_vi), short English usage, Vietnamese usage (usage_vi), structure formula, and a Vietnamese explanation (explanation_vi) that helps learners understand WHEN and WHY to use this tense.
 5. grammar: Exactly 8 structures: Giving opinion, Explaining reason, Result, Condition, Situation, Suggestion, Contrast, Clarifying.
 6. Keep the TOTAL response under 3500 tokens. Be concise.
 
@@ -549,12 +549,20 @@ Make the dialogue feel like a REAL conversation.`;
     container.innerHTML = `
       <div class="dbd-section">
         <div class="tense-cards">
-          ${tenses.map(t => `
+          ${tenses.map((t, i) => `
             <div class="tense-card">
-              <div class="tense-name">${t.tense || ''}</div>
-              <div class="tense-structure">${t.structure || ''}</div>
-              <div class="tense-example">"${t.example || ''}"</div>
+              <div class="tense-header">
+                <span class="tense-number">${i + 1}</span>
+                <div class="tense-name">${t.tense || ''}</div>
+              </div>
+              <div class="tense-structure">📐 ${t.structure || ''}</div>
+              <div class="tense-example-block">
+                <div class="tense-example">🇬🇧 "${t.example || ''}"</div>
+                ${t.example_vi ? `<div class="tense-example-vi">🇻🇳 "${t.example_vi}"</div>` : ''}
+              </div>
               <div class="tense-usage">💡 ${t.usage || ''}</div>
+              ${t.usage_vi ? `<div class="tense-usage-vi">💡 ${t.usage_vi}</div>` : ''}
+              ${t.explanation_vi ? `<div class="tense-explanation">📖 ${t.explanation_vi}</div>` : ''}
             </div>
           `).join('')}
         </div>

@@ -1001,19 +1001,31 @@ button, a, select {
   box-shadow: var(--shadow-glow);
 }
 
-.tense-name {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--accent-blue);
-  margin-bottom: 8px;
+.tense-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
-.tense-name::before {
-  content: '⏰';
-  font-size: 14px;
+.tense-number {
+  width: 26px;
+  height: 26px;
+  background: linear-gradient(135deg, var(--accent-primary), #8b5cf6);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.tense-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent-blue);
 }
 
 .tense-structure {
@@ -1023,24 +1035,55 @@ button, a, select {
   background: var(--bg-input);
   padding: 6px 10px;
   border-radius: 6px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   display: inline-block;
+}
+
+.tense-example-block {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  background: rgba(108, 92, 231, 0.08);
+  border-radius: 8px;
+  border-left: 3px solid var(--accent-primary);
 }
 
 .tense-example {
   font-size: 13px;
   color: var(--text-primary);
-  margin-bottom: 6px;
-  padding: 6px 10px;
-  background: rgba(108, 92, 231, 0.08);
-  border-radius: 6px;
-  border-left: 3px solid var(--accent-primary);
+  line-height: 1.5;
+  font-style: italic;
+}
+
+.tense-example-vi {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-style: italic;
 }
 
 .tense-usage {
   font-size: 12px;
+  color: var(--accent-secondary);
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+
+.tense-usage-vi {
+  font-size: 12px;
   color: var(--text-muted);
   line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+.tense-explanation {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  padding: 8px 10px;
+  background: rgba(0, 230, 118, 0.06);
+  border-radius: 6px;
+  border-left: 3px solid var(--accent-green);
+  margin-top: 6px;
 }
 
 /* ============================================
