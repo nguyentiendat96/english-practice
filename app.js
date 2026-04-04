@@ -39,14 +39,16 @@
     const topicSelect = document.getElementById('topicSelect');
     const levelSelect = document.getElementById('levelSelect');
     const turnsSelect = document.getElementById('turnsSelect');
+    const sentenceLengthSelect = document.getElementById('sentenceLengthSelect');
     if (!topicSelect || !levelSelect) return;
 
     const type = topicSelect.value;
     const level = levelSelect.value;
     const turns = turnsSelect ? parseInt(turnsSelect.value) : 10;
+    const sentenceLength = sentenceLengthSelect ? sentenceLengthSelect.value : 'medium';
     const cmd = `/${type} ${level}`;
     currentCommand = cmd;
-    generateDBD(cmd, turns);
+    generateDBD(cmd, turns, sentenceLength);
   }
 
   function quickCommand(type, level) {
@@ -113,7 +115,13 @@
   // ============================================
   // API CALL (Client-side, direct to MiniMax)
   // ============================================
-  async function generateDBD(command, turns = 10) {
+  const sentenceLengthMap = {
+    'short': 'Keep each sentence SHORT: 5-15 words per sentence.',
+    'medium': 'Keep each sentence MEDIUM length: 15-30 words per sentence.',
+    'long': 'Make each sentence LONG and detailed: 30-50 words per sentence.',
+  };
+
+  async function generateDBD(command, turns = 10, sentenceLength = 'medium') {
     // Check API key
     let apiKey = getApiKey();
     if (!apiKey) {
@@ -176,7 +184,7 @@ Generate this EXACT JSON structure:
 }
 
 RULES:
-1. dialogue_en: Generate EXACTLY ${turns} turns total. Bold all verbs with **verb**. Make it realistic, connected, not robotic.
+1. dialogue_en: Generate EXACTLY ${turns} turns total. ${sentenceLengthMap[sentenceLength] || sentenceLengthMap['medium']} Bold all verbs with **verb**. Make it realistic, connected, not robotic.
 2. dialogue_vi: Translate EXACTLY matching dialogue_en, natural Vietnamese style. Do NOT use ** in Vietnamese.
 3. vocabulary: Extract 8 important words from the dialogue.
 4. tenses: Analyze 4-5 main tenses used in the dialogue.
