@@ -60,9 +60,84 @@
   }
 
   // ============================================
-  // API CALL
+  // API KEY MANAGEMENT
+  // ============================================
+  const MINIMAX_API_URL = 'https://api.minimax.io/v1/chat/completions';
+
+  function getApiKey() {
+    return localStorage.getItem('minimax_api_key') || '';
+  }
+
+  function setApiKey(key) {
+    localStorage.setItem('minimax_api_key', key.trim());
+  }
+
+  function promptApiKey() {
+    const current = getApiKey();
+    const key = prompt('🔑 Nhập MiniMax API Key:\n(Lần đầu nhập, sẽ được lưu trên trình duyệt)', current);
+    if (key && key.trim()) {
+      setApiKey(key);
+      showToast('✅ API Key đã lưu!');
+      return true;
+    }
+    return false;
+  }
+
+  // ============================================
+  // TOPIC & LEVEL MAPS
+  // ============================================
+  const topicMap = {
+    'it': 'IT and Technology workplace',
+    'gt': 'Daily social communication and greetings',
+    'daily': 'Daily life activities and routines',
+    'office': 'Office and workplace interactions',
+    'airport': 'Airport and travel situations',
+    'food': 'Food, restaurants, and cooking',
+    'health': 'Health, fitness, and medical situations',
+    'business': 'Business meetings and negotiations',
+    'shopping': 'Shopping and retail experiences',
+    'travel': 'Travel and tourism adventures',
+    'school': 'School and education environment',
+    'sport': 'Sports and outdoor activities',
+    'movie': 'Movies, entertainment, and media',
+    'music': 'Music and performing arts',
+    'family': 'Family life and relationships',
+    'interview': 'Job interviews and career discussions',
+  };
+
+  const levelDescriptions = {
+    'A1': 'Beginner - Use very simple words, short sentences (8-15 words). Basic present tense mostly.',
+    'A2': 'Elementary - Simple but slightly longer sentences (12-20 words). Present, past simple tenses.',
+    'B1': 'Intermediate - Natural sentences (20-35 words). Mix of tenses including present perfect, conditionals.',
+    'B2': 'Upper-Intermediate - Advanced natural sentences (30-50 words). All tenses, passive voice, reported speech.',
+  };
+
+  // ============================================
+  // API CALL (Client-side, direct to MiniMax)
   // ============================================
   async function generateDBD(command) {
+    // Check API key
+    let apiKey = getApiKey();
+    if (!apiKey) {
+      if (!promptApiKey()) {
+        showToast('❌ Cần API Key để tạo bài học');
+        return;
+      }
+      apiKey = getApiKey();
+    }
+
+    // Parse command
+    const match = command.trim().match(/^\/?(\w+)\s+(a1|a2|b1|b2)$/i);
+    if (!match) {
+      showToast('❌ Sai cú pháp. Ví dụ: /it a1, /gt b1');
+      return;
+    }
+
+    const type = match[1].toLowerCase();
+    const level = match[2].toUpperCase();
+    const topic = topicMap[type] || `General conversation about ${type}`;
+    const levelDesc = levelDescriptions[level] || levelDescriptions['B1'];
+
     // Show loading
     welcomeScreen.style.display = 'none';
     dbdResult.style.display = 'none';
@@ -71,54 +146,145 @@
     const goBtn = document.getElementById('commandGoBtn');
     if (goBtn) { goBtn.disabled = true; goBtn.querySelector('span').textContent = 'Generating...'; }
 
+    const systemPrompt = `You are "English DBD", a practical English teacher. Generate a COMPLETE lesson based on a dialogue.
+
+IMPORTANT: You MUST respond with ONLY a valid JSON object. No markdown, no code fences, no explanations outside JSON.
+
+Topic: ${topic}
+Level: ${level} - ${levelDesc}
+
+Generate this EXACT JSON structure:
+{
+  "title": "Short title for the dialogue",
+  "topic": "${topic}",
+  "level": "${level}",
+  "dialogue_en": [
+    {"speaker": "A", "name": "Speaker Name", "text": "English sentence with **bolded verbs**."},
+    {"speaker": "B", "name": "Speaker Name", "text": "Response..."}
+  ],
+  "dialogue_vi": [
+    {"speaker": "A", "name": "Same Name", "text": "Vietnamese translation, natural and accurate"},
+    {"speaker": "B", "name": "Same Name", "text": "..."}
+  ],
+  "vocabulary": [
+    {"word": "example", "ipa": "/ɪɡˈzæmpəl/", "meaning": "ví dụ", "example_en": "This is an example.", "example_vi": "Đây là một ví dụ."}
+  ],
+  "tenses": [
+    {"tense": "Present Simple", "example": "I work here", "usage": "Describe habits and routines", "structure": "S + V(s/es) + O"}
+  ],
+  "grammar": [
+    {"type": "Giving opinion", "structure": "I think/believe + clause", "example_en": "I think this project is important.", "example_vi": "Tôi nghĩ dự án này quan trọng.", "explanation": "Used to express personal views"}
+  ]
+}
+
+RULES:
+1. dialogue_en: Generate 10 turns total. Bold all verbs with **verb**. Make it realistic, connected, not robotic.
+2. dialogue_vi: Translate EXACTLY matching dialogue_en, natural Vietnamese style. Do NOT use ** in Vietnamese.
+3. vocabulary: Extract 8 important words from the dialogue.
+4. tenses: Analyze 4-5 main tenses used in the dialogue.
+5. grammar: Exactly 8 structures: Giving opinion, Explaining reason, Result, Condition, Situation, Suggestion, Contrast, Clarifying.
+6. Keep the TOTAL response under 3500 tokens. Be concise.
+
+Make the dialogue feel like a REAL conversation.`;
+
     try {
-      const response = await fetch('/api/dbd', {
+      const response = await fetch(MINIMAX_API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command }),
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'MiniMax-M2.5',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `Generate a complete English DBD lesson. Topic: ${topic}. Level: ${level}. Make it engaging and educational.` }
+          ],
+          max_tokens: 8000,
+          temperature: 0.8,
+        }),
       });
+
       const data = await response.json();
 
       if (data.error) {
         loadingScreen.style.display = 'none';
         welcomeScreen.style.display = 'block';
-        showToast('❌ ' + data.error);
+        if (data.error.message && data.error.message.includes('auth')) {
+          showToast('❌ API Key không hợp lệ. Bấm ⚙️ để nhập lại.');
+        } else {
+          showToast('❌ ' + (data.error.message || 'API error'));
+        }
         return;
       }
 
-      if (data.dialogue_en) {
-        currentData = data;
-        
-        // Save to history
-        const historyItem = {
-          command: command,
-          title: data.title || 'Untitled',
-          level: data.level || '',
-          topic: data.topic || '',
-          timestamp: Date.now(),
-          data: data,
-        };
-        history.unshift(historyItem);
-        if (history.length > 20) history.pop();
-        localStorage.setItem('dbdHistory', JSON.stringify(history));
+      if (data.choices && data.choices.length > 0) {
+        let content = data.choices[0].message.content;
+        content = content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+        content = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
 
-        // Render result
-        loadingScreen.style.display = 'none';
-        dbdResult.style.display = 'block';
-        renderDBDResult(data);
-        showToast('✅ Đã tạo bài học thành công!');
+        let result = parseAIResponse(content);
+
+        if (result && result.dialogue_en) {
+          currentData = result;
+
+          const historyItem = {
+            command: command,
+            title: result.title || 'Untitled',
+            level: result.level || '',
+            topic: result.topic || '',
+            timestamp: Date.now(),
+            data: result,
+          };
+          history.unshift(historyItem);
+          if (history.length > 20) history.pop();
+          localStorage.setItem('dbdHistory', JSON.stringify(history));
+
+          loadingScreen.style.display = 'none';
+          dbdResult.style.display = 'block';
+          renderDBDResult(result);
+          showToast('✅ Đã tạo bài học thành công!');
+        } else {
+          loadingScreen.style.display = 'none';
+          welcomeScreen.style.display = 'block';
+          showToast('❌ AI response format error. Try again.');
+        }
       } else {
         loadingScreen.style.display = 'none';
         welcomeScreen.style.display = 'block';
-        showToast('❌ AI response format error. Try again.');
+        showToast('❌ No response from AI');
       }
     } catch (err) {
       loadingScreen.style.display = 'none';
       welcomeScreen.style.display = 'block';
-      showToast('❌ Lỗi kết nối. Kiểm tra server.');
+      showToast('❌ Lỗi kết nối: ' + err.message);
     } finally {
       if (goBtn) { goBtn.disabled = false; goBtn.querySelector('span').textContent = 'Generate'; }
     }
+  }
+
+  // --- Parse & repair AI JSON ---
+  function parseAIResponse(content) {
+    try {
+      return JSON.parse(content);
+    } catch (e) {
+      const m = content.match(/\{[\s\S]*\}/);
+      if (m) {
+        try { return JSON.parse(m[0]); } catch (e2) {
+          let repaired = m[0];
+          repaired = repaired.replace(/,\s*\{[^}]*$/, '');
+          repaired = repaired.replace(/,\s*"[^"]*$/, '');
+          const opens = (repaired.match(/\[/g) || []).length;
+          const closes = (repaired.match(/\]/g) || []).length;
+          const openB = (repaired.match(/\{/g) || []).length;
+          const closeB = (repaired.match(/\}/g) || []).length;
+          for (let x = 0; x < opens - closes; x++) repaired += ']';
+          for (let x = 0; x < openB - closeB; x++) repaired += '}';
+          try { return JSON.parse(repaired); } catch(e3) { return null; }
+        }
+      }
+    }
+    return null;
   }
 
   // ============================================
@@ -756,14 +922,37 @@
 
     chatHistory.push({ role: 'user', content: userText });
 
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      const typing = document.getElementById('chatTyping');
+      if (typing) typing.remove();
+      messages.innerHTML += `<div class="chat-msg bot"><div class="chat-bubble">⚠️ Cần API Key. Bấm ⚙️ ở header.</div></div>`;
+      messages.scrollTop = messages.scrollHeight;
+      return;
+    }
+
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch(MINIMAX_API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: chatHistory }),
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'MiniMax-M2.5',
+          messages: [
+            { role: 'system', content: 'You are a friendly English tutor. Answer in a mix of English and Vietnamese to help the user learn. Be concise.' },
+            ...chatHistory,
+          ],
+          max_tokens: 1000,
+          temperature: 0.7,
+        }),
       });
       const data = await response.json();
-      const reply = data.reply || '⚠️ Không nhận được phản hồi.';
+      let reply = '⚠️ Không nhận được phản hồi.';
+      if (data.choices && data.choices.length > 0) {
+        reply = data.choices[0].message.content;
+      }
 
       const typing = document.getElementById('chatTyping');
       if (typing) typing.remove();
@@ -774,7 +963,7 @@
     } catch (err) {
       const typing = document.getElementById('chatTyping');
       if (typing) typing.remove();
-      messages.innerHTML += `<div class="chat-msg bot"><div class="chat-bubble">❌ Lỗi kết nối.</div></div>`;
+      messages.innerHTML += `<div class="chat-msg bot"><div class="chat-bubble">❌ Lỗi: ${err.message}</div></div>`;
     }
 
     messages.scrollTop = messages.scrollHeight;
@@ -827,6 +1016,7 @@
     changeSpeed,
     toggleChat,
     sendChat,
+    promptApiKey,
   };
 
   // --- Start ---
