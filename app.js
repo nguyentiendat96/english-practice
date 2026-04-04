@@ -448,16 +448,15 @@ Make the dialogue feel like a REAL conversation.`;
             const viText = viLines[i] ? (viLines[i].text || '').replace(/\*\*/g, '') : '';
 
             return `
-              <div class="dialogue-turn ${speakerClass}" id="turn-${i}" data-en="${escapeAttr(cleanEn)}">
+              <div class="dialogue-turn ${speakerClass} clickable-row" id="turn-${i}" data-en="${escapeAttr(cleanEn)}" onclick="app.toggleVi(${i})">
                 <div class="dialogue-avatar">${speakerInitial}</div>
                 <div class="dialogue-content">
                   <div class="dialogue-name">${speakerName}</div>
                   <div class="dialogue-en">${displayEn}</div>
                   <div class="dialogue-vi-toggle" id="vi-toggle-${i}" style="display:none;margin-top:4px;font-size:13px;color:var(--text-muted);font-style:italic;padding:4px 8px;background:rgba(108,92,231,0.06);border-radius:6px;">🇻🇳 ${viText}</div>
                 </div>
-                <div class="dialogue-actions">
+                <div class="dialogue-actions" onclick="event.stopPropagation()">
                   <button class="dialogue-btn" onclick="app.speak('${escapeQuotes(cleanEn)}')" title="Nghe">🔊</button>
-                  <button class="dialogue-btn" onclick="app.toggleVi(${i})" title="Xem tiếng Việt">🇻🇳</button>
                 </div>
               </div>
             `;
@@ -490,12 +489,12 @@ Make the dialogue feel like a REAL conversation.`;
             const speakerInitial = speakerName.charAt(0).toUpperCase();
 
             return `
-              <div class="dialogue-turn ${speakerClass}" id="turn-${i}" data-en="${escapeAttr(enText)}">
+              <div class="dialogue-turn ${speakerClass} clickable-row" id="turn-${i}" data-en="${escapeAttr(enText)}" onclick="app.revealEnglish(${i})">
                 <div class="dialogue-avatar">${speakerInitial}</div>
                 <div class="dialogue-content">
                   <div class="dialogue-name">${speakerName}</div>
                   <div class="dialogue-vi" style="display:block;font-style:normal;color:var(--text-primary);font-size:14px;">🇻🇳 ${viText}</div>
-                  <div class="practice-write-area" id="write-area-${i}">
+                  <div class="practice-write-area" id="write-area-${i}" onclick="event.stopPropagation()">
                     <div class="practice-write-row">
                       <input type="text" class="practice-write-input" id="write-input-${i}" 
                              placeholder="Viết lại bằng tiếng Anh..." 
@@ -508,9 +507,8 @@ Make the dialogue feel like a REAL conversation.`;
                   <div class="dialogue-en practice-hidden" id="en-reveal-${i}" style="display:none;margin-top:6px;padding:6px 10px;background:rgba(108,92,231,0.1);border-radius:6px;font-size:13px;color:var(--accent-secondary);">🇬🇧 ${enText}</div>
                   <div id="score-${i}"></div>
                 </div>
-                <div class="dialogue-actions">
+                <div class="dialogue-actions" onclick="event.stopPropagation()">
                   <button class="dialogue-btn" id="mic-${i}" onclick="app.recordTurn(${i})" title="Nói tiếng Anh">🎙️</button>
-                  <button class="dialogue-btn" onclick="app.revealEnglish(${i})" title="Xem đáp án">👁️</button>
                   <button class="dialogue-btn" onclick="app.speak('${escapeQuotes(enText)}')" title="Nghe đáp án">🔊</button>
                 </div>
               </div>
