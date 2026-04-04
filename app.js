@@ -38,13 +38,15 @@
   function executeCommand() {
     const topicSelect = document.getElementById('topicSelect');
     const levelSelect = document.getElementById('levelSelect');
+    const turnsSelect = document.getElementById('turnsSelect');
     if (!topicSelect || !levelSelect) return;
 
     const type = topicSelect.value;
     const level = levelSelect.value;
+    const turns = turnsSelect ? parseInt(turnsSelect.value) : 10;
     const cmd = `/${type} ${level}`;
     currentCommand = cmd;
-    generateDBD(cmd);
+    generateDBD(cmd, turns);
   }
 
   function quickCommand(type, level) {
@@ -111,7 +113,7 @@
   // ============================================
   // API CALL (Client-side, direct to MiniMax)
   // ============================================
-  async function generateDBD(command) {
+  async function generateDBD(command, turns = 10) {
     // Check API key
     let apiKey = getApiKey();
     if (!apiKey) {
@@ -174,7 +176,7 @@ Generate this EXACT JSON structure:
 }
 
 RULES:
-1. dialogue_en: Generate 10 turns total. Bold all verbs with **verb**. Make it realistic, connected, not robotic.
+1. dialogue_en: Generate EXACTLY ${turns} turns total. Bold all verbs with **verb**. Make it realistic, connected, not robotic.
 2. dialogue_vi: Translate EXACTLY matching dialogue_en, natural Vietnamese style. Do NOT use ** in Vietnamese.
 3. vocabulary: Extract 8 important words from the dialogue.
 4. tenses: Analyze 4-5 main tenses used in the dialogue.
