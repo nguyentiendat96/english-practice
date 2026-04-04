@@ -287,14 +287,13 @@ Make the dialogue feel like a REAL conversation.`;
     return null;
   }
 
-  // ============================================
+   // ============================================
   // RENDER DBD RESULT
   // ============================================
-  let activeTab = 'dialogue';
+  let activeTab = 'english';
 
   function renderDBDResult(data) {
     if (!data) return;
-    showVietnamese = true;
 
     dbdResult.innerHTML = `
       <!-- Header -->
@@ -308,16 +307,15 @@ Make the dialogue feel like a REAL conversation.`;
           </div>
         </div>
         <div class="dbd-header-actions">
-          <button class="dbd-action-btn" onclick="app.toggleVietnamese()" id="btnToggleVi">🇻🇳 Ẩn/Hiện VN</button>
           <button class="dbd-action-btn" onclick="app.playAll()">▶️ Nghe hết</button>
-          <button class="dbd-action-btn" onclick="app.startPractice()">🎤 Luyện nói</button>
           <button class="dbd-action-btn" onclick="app.backToHome()">🏠 Về trang chủ</button>
         </div>
       </div>
 
       <!-- Section Tabs -->
       <div class="dbd-tabs">
-        <button class="dbd-tab ${activeTab === 'dialogue' ? 'active' : ''}" onclick="app.switchTab('dialogue')">📑 Hội thoại</button>
+        <button class="dbd-tab ${activeTab === 'english' ? 'active' : ''}" onclick="app.switchTab('english')">🇬🇧 English</button>
+        <button class="dbd-tab ${activeTab === 'practice' ? 'active' : ''}" onclick="app.switchTab('practice')">🇻🇳 Luyện dịch</button>
         <button class="dbd-tab ${activeTab === 'vocabulary' ? 'active' : ''}" onclick="app.switchTab('vocabulary')">📚 Từ vựng</button>
         <button class="dbd-tab ${activeTab === 'tenses' ? 'active' : ''}" onclick="app.switchTab('tenses')">⏰ Tenses</button>
         <button class="dbd-tab ${activeTab === 'grammar' ? 'active' : ''}" onclick="app.switchTab('grammar')">📝 Grammar</button>
@@ -332,14 +330,9 @@ Make the dialogue feel like a REAL conversation.`;
 
   function switchTab(tab) {
     activeTab = tab;
-    // Update tab active state
-    document.querySelectorAll('.dbd-tab').forEach(t => {
-      t.classList.toggle('active', t.textContent.toLowerCase().includes(tab === 'dialogue' ? 'hội' : tab === 'vocabulary' ? 'từ' : tab));
-    });
-    // Re-select by matching
     const tabs = document.querySelectorAll('.dbd-tab');
+    const tabMap = ['english', 'practice', 'vocabulary', 'tenses', 'grammar'];
     tabs.forEach((t, i) => {
-      const tabMap = ['dialogue', 'vocabulary', 'tenses', 'grammar'];
       t.classList.toggle('active', tabMap[i] === tab);
     });
     renderSection(tab, currentData);
@@ -350,31 +343,30 @@ Make the dialogue feel like a REAL conversation.`;
     if (!container || !data) return;
 
     switch (tab) {
-      case 'dialogue': renderDialogueSection(container, data); break;
+      case 'english': renderEnglishSection(container, data); break;
+      case 'practice': renderPracticeSection(container, data); break;
       case 'vocabulary': renderVocabularySection(container, data); break;
       case 'tenses': renderTensesSection(container, data); break;
       case 'grammar': renderGrammarSection(container, data); break;
     }
   }
 
-  // --- Dialogue Section ---
-  function renderDialogueSection(container, data) {
+  // --- 🇬🇧 English Tab: English only, listen & read ---
+  function renderEnglishSection(container, data) {
     const enLines = data.dialogue_en || [];
-    const viLines = data.dialogue_vi || [];
 
     container.innerHTML = `
-      <div class="dbd-section ${showVietnamese ? 'show-vi' : ''}">
+      <div class="dbd-section">
+        <div style="padding:8px 16px;margin-bottom:8px;font-size:13px;color:var(--text-muted);background:var(--bg-card);border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">
+          💡 <strong>Bước 1:</strong> Đọc và nghe hội thoại tiếng Anh. Bấm 🔊 để nghe từng câu. Sau khi hiểu, chuyển sang tab <strong>🇻🇳 Luyện dịch</strong> để kiểm tra.
+        </div>
         <div class="dialogue-container" id="dialogueContainer">
           ${enLines.map((line, i) => {
-            const viLine = viLines[i];
             const speakerClass = (line.speaker || 'A') === 'A' ? 'speaker-a' : 'speaker-b';
             const enText = line.text || '';
-            const viText = viLine ? (viLine.text || '').replace(/\*\*/g, '') : '';
             const speakerName = line.name || line.speaker || 'Speaker';
             const speakerInitial = speakerName.charAt(0).toUpperCase();
-            // Clean bold markers for speech
             const cleanEn = enText.replace(/\*\*/g, '');
-            // Convert **word** to <strong>word</strong> for display
             const displayEn = enText.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
 
             return `
@@ -383,12 +375,53 @@ Make the dialogue feel like a REAL conversation.`;
                 <div class="dialogue-content">
                   <div class="dialogue-name">${speakerName}</div>
                   <div class="dialogue-en">${displayEn}</div>
-                  <div class="dialogue-vi">${viText}</div>
-                  <div id="score-${i}"></div>
                 </div>
                 <div class="dialogue-actions">
                   <button class="dialogue-btn" onclick="app.speak('${escapeQuotes(cleanEn)}')" title="Nghe">🔊</button>
-                  <button class="dialogue-btn" id="mic-${i}" onclick="app.recordTurn(${i})" title="Đọc">🎙️</button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // --- 🇻🇳 Practice Tab: See Vietnamese, speak English, get scored ---
+  function renderPracticeSection(container, data) {
+    const enLines = data.dialogue_en || [];
+    const viLines = data.dialogue_vi || [];
+
+    container.innerHTML = `
+      <div class="dbd-section">
+        <div style="padding:8px 16px;margin-bottom:8px;font-size:13px;color:var(--text-muted);background:var(--bg-card);border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">
+          🎯 <strong>Bước 2:</strong> Đọc câu tiếng Việt → Bấm 🎙️ nói lại bằng tiếng Anh → xem điểm. Hoặc bấm <strong>"🎤 Auto Practice"</strong> để luyện tự động.
+        </div>
+        <div style="text-align:center;margin-bottom:12px;">
+          <button class="dbd-action-btn active" onclick="app.startPractice()" id="autoPracticeBtn" style="padding:10px 24px;font-size:14px;">🎤 Auto Practice</button>
+        </div>
+        <div class="dialogue-container" id="dialogueContainer">
+          ${viLines.map((viLine, i) => {
+            const enLine = enLines[i];
+            const speakerClass = (viLine.speaker || 'A') === 'A' ? 'speaker-a' : 'speaker-b';
+            const viText = (viLine.text || '').replace(/\*\*/g, '');
+            const enText = enLine ? (enLine.text || '').replace(/\*\*/g, '') : '';
+            const speakerName = viLine.name || viLine.speaker || 'Speaker';
+            const speakerInitial = speakerName.charAt(0).toUpperCase();
+
+            return `
+              <div class="dialogue-turn ${speakerClass}" id="turn-${i}" data-en="${escapeAttr(enText)}">
+                <div class="dialogue-avatar">${speakerInitial}</div>
+                <div class="dialogue-content">
+                  <div class="dialogue-name">${speakerName}</div>
+                  <div class="dialogue-vi" style="display:block;font-style:normal;color:var(--text-primary);font-size:14px;">🇻🇳 ${viText}</div>
+                  <div class="dialogue-en practice-hidden" id="en-reveal-${i}" style="display:none;margin-top:6px;padding:6px 10px;background:rgba(108,92,231,0.1);border-radius:6px;font-size:13px;color:var(--accent-secondary);">🇬🇧 ${enText}</div>
+                  <div id="score-${i}"></div>
+                </div>
+                <div class="dialogue-actions">
+                  <button class="dialogue-btn" id="mic-${i}" onclick="app.recordTurn(${i})" title="Nói tiếng Anh">🎙️</button>
+                  <button class="dialogue-btn" onclick="app.revealEnglish(${i})" title="Xem đáp án">👁️</button>
+                  <button class="dialogue-btn" onclick="app.speak('${escapeQuotes(enText)}')" title="Nghe đáp án">🔊</button>
                 </div>
               </div>
             `;
@@ -970,6 +1003,16 @@ Make the dialogue feel like a REAL conversation.`;
   }
 
   // ============================================
+  // REVEAL ENGLISH ANSWER
+  // ============================================
+  function revealEnglish(index) {
+    const el = document.getElementById(`en-reveal-${index}`);
+    if (el) {
+      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+  }
+
+  // ============================================
   // UTILITIES
   // ============================================
   function escapeQuotes(str) {
@@ -1004,11 +1047,11 @@ Make the dialogue feel like a REAL conversation.`;
     executeCommand,
     quickCommand,
     switchTab,
-    toggleVietnamese,
     speak,
     playAll,
     recordTurn,
     startPractice,
+    revealEnglish,
     loadHistory,
     deleteHistory,
     backToHome,
