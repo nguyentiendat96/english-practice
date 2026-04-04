@@ -246,16 +246,20 @@ Generate this EXACT JSON structure:
   ],
   "grammar": [
     {"type": "Giving opinion", "structure": "I think/believe + clause", "example_en": "I think this project is important.", "example_vi": "Tôi nghĩ dự án này quan trọng.", "explanation": "Used to express personal views"}
+  ],
+  "connectors": [
+    {"word": "however", "type": "Contrast", "type_vi": "Tương phản", "example": "Quote from dialogue using this word", "example_vi": "Dịch tiếng Việt", "explanation_vi": "Dùng để nối 2 ý trái ngược nhau, thường đứng đầu câu."}
   ]
 }
 
 RULES:
-1. dialogue_en: Generate EXACTLY ${turns} turns total. ${sentenceLengthMap[sentenceLength] || sentenceLengthMap['medium']} Bold all verbs with **verb**. Make it realistic, connected, not robotic.
+1. dialogue_en: Generate EXACTLY ${turns} turns total. ${sentenceLengthMap[sentenceLength] || sentenceLengthMap['medium']} Bold all verbs with **verb**. Make it realistic, connected, not robotic. IMPORTANT: Use linking words/connectors appropriate for ${level} level throughout the dialogue (e.g., A1: and, but, so, because; A2: also, however, although; B1: moreover, nevertheless, therefore, in spite of; B2: furthermore, consequently, whereas, provided that). Make the conversation flow naturally with these connectors.
 2. dialogue_vi: Translate EXACTLY matching dialogue_en, natural Vietnamese style. Do NOT use ** in Vietnamese.
 3. vocabulary: Extract 8 important words from the dialogue.
 4. tenses: Analyze 4-5 main tenses ACTUALLY USED in the dialogue. For each tense, "example" MUST be a real sentence quoted from the dialogue. Include Vietnamese translation (example_vi), short English usage, Vietnamese usage (usage_vi), structure formula, and a Vietnamese explanation (explanation_vi) that helps learners understand WHEN and WHY to use this tense.
 5. grammar: Exactly 8 structures: Giving opinion, Explaining reason, Result, Condition, Situation, Suggestion, Contrast, Clarifying.
-6. Keep the TOTAL response under 3500 tokens. Be concise.
+6. connectors: Extract 5-8 linking words/connectors/conjunctions ACTUALLY USED in the dialogue. Categorize each as Addition/Contrast/Cause/Result/Condition/Time/Purpose. Quote real example from dialogue. Explain in Vietnamese when and how to use each connector.
+7. Keep the TOTAL response under 4000 tokens. Be concise.
 
 Make the dialogue feel like a REAL conversation.`;
 
@@ -583,6 +587,17 @@ Make the dialogue feel like a REAL conversation.`;
   // --- Grammar Section ---
   function renderGrammarSection(container, data) {
     const grammar = data.grammar || [];
+    const connectors = data.connectors || [];
+
+    const connectorTypeColors = {
+      'Addition': 'var(--accent-blue)',
+      'Contrast': 'var(--accent-orange)',
+      'Cause': 'var(--accent-yellow)',
+      'Result': 'var(--accent-green)',
+      'Condition': 'var(--accent-pink)',
+      'Time': 'var(--accent-cyan)',
+      'Purpose': 'var(--accent-secondary)',
+    };
 
     container.innerHTML = `
       <div class="dbd-section">
@@ -597,6 +612,30 @@ Make the dialogue feel like a REAL conversation.`;
             </div>
           `).join('')}
         </div>
+
+        ${connectors.length > 0 ? `
+          <div class="connectors-section">
+            <h3 class="connectors-title">🔗 Linking Words / Connectors</h3>
+            <div class="connectors-grid">
+              ${connectors.map(c => {
+                const color = connectorTypeColors[c.type] || 'var(--accent-secondary)';
+                return `
+                  <div class="connector-card">
+                    <div class="connector-header">
+                      <span class="connector-word">${c.word || ''}</span>
+                      <span class="connector-type" style="background:${color}20;color:${color};border:1px solid ${color}40;">${c.type_vi || c.type || ''}</span>
+                    </div>
+                    <div class="connector-example">
+                      <div class="connector-example-en">🇬🇧 "${c.example || ''}"</div>
+                      ${c.example_vi ? `<div class="connector-example-vi">🇻🇳 "${c.example_vi}"</div>` : ''}
+                    </div>
+                    ${c.explanation_vi ? `<div class="connector-explanation">📖 ${c.explanation_vi}</div>` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : ''}
       </div>
     `;
   }

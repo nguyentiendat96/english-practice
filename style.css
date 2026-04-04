@@ -1298,6 +1298,96 @@ button, a, select {
 }
 
 /* ============================================
+   CONNECTORS / LINKING WORDS
+   ============================================ */
+.connectors-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 2px solid var(--border-accent);
+}
+
+.connectors-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  color: var(--text-primary);
+}
+
+.connectors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 10px;
+}
+
+.connector-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  transition: all 0.2s;
+}
+
+.connector-card:hover {
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-glow);
+}
+
+.connector-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.connector-word {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent-secondary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.connector-type {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.connector-example {
+  padding: 8px 12px;
+  background: rgba(108, 92, 231, 0.08);
+  border-radius: 6px;
+  border-left: 3px solid var(--accent-primary);
+  margin-bottom: 8px;
+}
+
+.connector-example-en {
+  font-size: 13px;
+  color: var(--text-primary);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.connector-example-vi {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 3px;
+}
+
+.connector-explanation {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  padding: 6px 10px;
+  background: rgba(0, 230, 118, 0.06);
+  border-radius: 6px;
+  border-left: 3px solid var(--accent-green);
+}
+
+/* ============================================
    AI CHAT PANEL
    ============================================ */
 .chat-fab {
