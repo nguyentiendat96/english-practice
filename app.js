@@ -63,6 +63,17 @@
   // API KEY MANAGEMENT
   // ============================================
   const MINIMAX_API_URL = 'https://api.minimax.io/v1/chat/completions';
+  const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
+
+  // ElevenLabs voices
+  const elevenLabsVoices = [
+    { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel (Nữ)' },
+    { id: 'pNInz6obpgDQGcFmaJgB', name: 'Adam (Nam)' },
+    { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Bella (Nữ)' },
+    { id: 'ErXwobaYiN019PkySvjV', name: 'Antoni (Nam)' },
+    { id: 'MF3mGyEYCl7XYWbV9V6O', name: 'Elli (Nữ)' },
+    { id: 'TxGEqnHWrfWFTfGW9XjX', name: 'Josh (Nam)' },
+  ];
 
   function getApiKey() {
     return localStorage.getItem('minimax_api_key') || '';
@@ -72,15 +83,70 @@
     localStorage.setItem('minimax_api_key', key.trim());
   }
 
+  function getElevenLabsKey() {
+    return localStorage.getItem('elevenlabs_api_key') || '';
+  }
+
+  function setElevenLabsKey(key) {
+    localStorage.setItem('elevenlabs_api_key', key.trim());
+  }
+
+  function getElevenLabsVoice() {
+    return localStorage.getItem('elevenlabs_voice') || '21m00Tcm4TlvDq8ikWAM';
+  }
+
+  function setElevenLabsVoice(id) {
+    localStorage.setItem('elevenlabs_voice', id);
+  }
+
   function promptApiKey() {
-    const current = getApiKey();
-    const key = prompt('🔑 Nhập MiniMax API Key:\n(Lần đầu nhập, sẽ được lưu trên trình duyệt)', current);
-    if (key && key.trim()) {
-      setApiKey(key);
-      showToast('✅ API Key đã lưu!');
-      return true;
-    }
-    return false;
+    // Build settings modal
+    const existing = document.getElementById('settingsModal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'settingsModal';
+    modal.className = 'settings-modal-overlay';
+    modal.innerHTML = `
+      <div class="settings-modal">
+        <h3>⚙️ Cài đặt API Keys</h3>
+        <div class="settings-group">
+          <label>🤖 MiniMax API Key <span style="color:var(--text-muted);font-size:11px;">(tạo bài học)</span></label>
+          <input type="password" id="settingsMinimax" class="settings-input" placeholder="Nhập MiniMax API Key..." value="${getApiKey()}">
+        </div>
+        <div class="settings-group">
+          <label>🔊 ElevenLabs API Key <span style="color:var(--text-muted);font-size:11px;">(giọng AI cao cấp)</span></label>
+          <input type="password" id="settingsElevenlabs" class="settings-input" placeholder="Nhập ElevenLabs API Key..." value="${getElevenLabsKey()}">
+        </div>
+        <div class="settings-group">
+          <label>🎙️ Giọng ElevenLabs</label>
+          <select id="settingsELVoice" class="settings-input">
+            ${elevenLabsVoices.map(v => `<option value="${v.id}" ${v.id === getElevenLabsVoice() ? 'selected' : ''}>${v.name}</option>`).join('')}
+          </select>
+        </div>
+        <div class="settings-info">
+          💡 ElevenLabs cho giọng nói tự nhiên hơn. Nếu không có key, sẽ dùng giọng trình duyệt.
+        </div>
+        <div class="settings-actions">
+          <button class="settings-cancel" onclick="document.getElementById('settingsModal').remove()">Hủy</button>
+          <button class="settings-save" onclick="app.saveSettings()">💾 Lưu</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('#settingsMinimax').focus();
+    return true;
+  }
+
+  function saveSettings() {
+    const minimax = document.getElementById('settingsMinimax')?.value;
+    const elevenlabs = document.getElementById('settingsElevenlabs')?.value;
+    const elVoice = document.getElementById('settingsELVoice')?.value;
+    if (minimax !== undefined) setApiKey(minimax);
+    if (elevenlabs !== undefined) setElevenLabsKey(elevenlabs);
+    if (elVoice) setElevenLabsVoice(elVoice);
+    document.getElementById('settingsModal')?.remove();
+    showToast('✅ Đã lưu cài đặt!');
   }
 
   // ============================================
@@ -580,7 +646,68 @@ Make the dialogue feel like a REAL conversation.`;
     localStorage.setItem('speechRate', speechRate);
   }
 
+  // --- ElevenLabs TTS ---
+  const audioCache = new Map();
+  let currentAudio = null;
+
+  async function elevenLabsSpeak(text) {
+    const key = getElevenLabsKey();
+    const voiceId = getElevenLabsVoice();
+    if (!key) return null;
+
+    // Check cache
+    const cacheKey = `${voiceId}_${text}`;
+    if (audioCache.has(cacheKey)) {
+      return audioCache.get(cacheKey);
+    }
+
+    try {
+      const response = await fetch(`${ELEVENLABS_API_URL}/${voiceId}`, {
+        method: 'POST',
+        headers: {
+          'xi-api-key': key,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: text,
+          model_id: 'eleven_multilingual_v2',
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.75,
+            speed: speechRate,
+          },
+        }),
+      });
+
+      if (!response.ok) return null;
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      audioCache.set(cacheKey, url);
+      return url;
+    } catch (e) {
+      return null;
+    }
+  }
+
   function speak(text) {
+    // Try ElevenLabs first
+    if (getElevenLabsKey()) {
+      if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+      elevenLabsSpeak(text).then(url => {
+        if (url) {
+          currentAudio = new Audio(url);
+          currentAudio.play();
+        } else {
+          browserSpeak(text);
+        }
+      });
+    } else {
+      browserSpeak(text);
+    }
+  }
+
+  function browserSpeak(text) {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
@@ -592,6 +719,26 @@ Make the dialogue feel like a REAL conversation.`;
   }
 
   function speakAndWait(text) {
+    // Try ElevenLabs first
+    if (getElevenLabsKey()) {
+      return new Promise(async resolve => {
+        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+        const url = await elevenLabsSpeak(text);
+        if (url) {
+          currentAudio = new Audio(url);
+          currentAudio.onended = () => setTimeout(resolve, 400);
+          currentAudio.onerror = () => { browserSpeakAndWait(text).then(resolve); };
+          currentAudio.play();
+        } else {
+          browserSpeakAndWait(text).then(resolve);
+        }
+      });
+    } else {
+      return browserSpeakAndWait(text);
+    }
+  }
+
+  function browserSpeakAndWait(text) {
     return new Promise(resolve => {
       if (!('speechSynthesis' in window)) { resolve(); return; }
       window.speechSynthesis.cancel();
@@ -1072,6 +1219,7 @@ Make the dialogue feel like a REAL conversation.`;
     toggleChat,
     sendChat,
     promptApiKey,
+    saveSettings,
   };
 
   // --- Start ---
