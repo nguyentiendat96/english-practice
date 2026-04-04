@@ -430,11 +430,12 @@ Make the dialogue feel like a REAL conversation.`;
   // --- 🇬🇧 English Tab: English only, listen & read ---
   function renderEnglishSection(container, data) {
     const enLines = data.dialogue_en || [];
+    const viLines = data.dialogue_vi || [];
 
     container.innerHTML = `
       <div class="dbd-section">
         <div style="padding:8px 16px;margin-bottom:8px;font-size:13px;color:var(--text-muted);background:var(--bg-card);border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">
-          💡 <strong>Bước 1:</strong> Đọc và nghe hội thoại tiếng Anh. Bấm 🔊 để nghe từng câu. Sau khi hiểu, chuyển sang tab <strong>🇻🇳 Luyện dịch</strong> để kiểm tra.
+          💡 <strong>Bước 1:</strong> Đọc và nghe hội thoại tiếng Anh. Bấm 🔊 để nghe, bấm 🇻🇳 để xem nghĩa. Sau đó chuyển sang tab <strong>🇻🇳 Luyện dịch</strong>.
         </div>
         <div class="dialogue-container" id="dialogueContainer">
           ${enLines.map((line, i) => {
@@ -444,6 +445,7 @@ Make the dialogue feel like a REAL conversation.`;
             const speakerInitial = speakerName.charAt(0).toUpperCase();
             const cleanEn = enText.replace(/\*\*/g, '');
             const displayEn = enText.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            const viText = viLines[i] ? (viLines[i].text || '').replace(/\*\*/g, '') : '';
 
             return `
               <div class="dialogue-turn ${speakerClass}" id="turn-${i}" data-en="${escapeAttr(cleanEn)}">
@@ -451,9 +453,11 @@ Make the dialogue feel like a REAL conversation.`;
                 <div class="dialogue-content">
                   <div class="dialogue-name">${speakerName}</div>
                   <div class="dialogue-en">${displayEn}</div>
+                  <div class="dialogue-vi-toggle" id="vi-toggle-${i}" style="display:none;margin-top:4px;font-size:13px;color:var(--text-muted);font-style:italic;padding:4px 8px;background:rgba(108,92,231,0.06);border-radius:6px;">🇻🇳 ${viText}</div>
                 </div>
                 <div class="dialogue-actions">
                   <button class="dialogue-btn" onclick="app.speak('${escapeQuotes(cleanEn)}')" title="Nghe">🔊</button>
+                  <button class="dialogue-btn" onclick="app.toggleVi(${i})" title="Xem tiếng Việt">🇻🇳</button>
                 </div>
               </div>
             `;
@@ -1219,6 +1223,16 @@ Make the dialogue feel like a REAL conversation.`;
   }
 
   // ============================================
+  // TOGGLE VIETNAMESE IN ENGLISH TAB
+  // ============================================
+  function toggleVi(index) {
+    const el = document.getElementById(`vi-toggle-${index}`);
+    if (el) {
+      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+  }
+
+  // ============================================
   // REVEAL ENGLISH ANSWER
   // ============================================
   function revealEnglish(index) {
@@ -1332,6 +1346,7 @@ Make the dialogue feel like a REAL conversation.`;
     startPractice,
     revealEnglish,
     checkWriting,
+    toggleVi,
     loadHistory,
     deleteHistory,
     backToHome,
