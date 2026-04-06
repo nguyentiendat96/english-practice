@@ -1,7 +1,7 @@
 // ============================================
 // ENGLISH DBD - App Logic
 // ============================================
-(function() {
+(function () {
   'use strict';
 
   // --- State ---
@@ -356,14 +356,14 @@ Make the dialogue feel like a REAL conversation.`;
           const closeB = (repaired.match(/\}/g) || []).length;
           for (let x = 0; x < opens - closes; x++) repaired += ']';
           for (let x = 0; x < openB - closeB; x++) repaired += '}';
-          try { return JSON.parse(repaired); } catch(e3) { return null; }
+          try { return JSON.parse(repaired); } catch (e3) { return null; }
         }
       }
     }
     return null;
   }
 
-   // ============================================
+  // ============================================
   // RENDER DBD RESULT
   // ============================================
   let activeTab = 'english';
@@ -473,16 +473,16 @@ Make the dialogue feel like a REAL conversation.`;
         </div>
         <div class="dialogue-container" id="dialogueContainer">
           ${enLines.map((line, i) => {
-            const speakerClass = (line.speaker || 'A') === 'A' ? 'speaker-a' : 'speaker-b';
-            const enText = line.text || '';
-            const speakerName = line.name || line.speaker || 'Speaker';
-            const speakerInitial = speakerName.charAt(0).toUpperCase();
-            const cleanEn = enText.replace(/\*\*/g, '');
-            const displayEn = enText.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-            const viText = viLines[i] ? (viLines[i].text || '').replace(/\*\*/g, '') : '';
-            const analysis = findAnalysis(cleanEn);
+      const speakerClass = (line.speaker || 'A') === 'A' ? 'speaker-a' : 'speaker-b';
+      const enText = line.text || '';
+      const speakerName = line.name || line.speaker || 'Speaker';
+      const speakerInitial = speakerName.charAt(0).toUpperCase();
+      const cleanEn = enText.replace(/\*\*/g, '');
+      const displayEn = enText.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      const viText = viLines[i] ? (viLines[i].text || '').replace(/\*\*/g, '') : '';
+      const analysis = findAnalysis(cleanEn);
 
-            return `
+      return `
               <div class="dialogue-turn ${speakerClass} clickable-row" id="turn-${i}" data-en="${escapeAttr(cleanEn)}" onclick="app.toggleVi(${i})">
                 <div class="dialogue-avatar">${speakerInitial}</div>
                 <div class="dialogue-content">
@@ -498,7 +498,7 @@ Make the dialogue feel like a REAL conversation.`;
                 </div>
               </div>
             `;
-          }).join('')}
+    }).join('')}
         </div>
       </div>
     `;
@@ -519,14 +519,14 @@ Make the dialogue feel like a REAL conversation.`;
         </div>
         <div class="dialogue-container" id="dialogueContainer">
           ${viLines.map((viLine, i) => {
-            const enLine = enLines[i];
-            const speakerClass = (viLine.speaker || 'A') === 'A' ? 'speaker-a' : 'speaker-b';
-            const viText = (viLine.text || '').replace(/\*\*/g, '');
-            const enText = enLine ? (enLine.text || '').replace(/\*\*/g, '') : '';
-            const speakerName = viLine.name || viLine.speaker || 'Speaker';
-            const speakerInitial = speakerName.charAt(0).toUpperCase();
+      const enLine = enLines[i];
+      const speakerClass = (viLine.speaker || 'A') === 'A' ? 'speaker-a' : 'speaker-b';
+      const viText = (viLine.text || '').replace(/\*\*/g, '');
+      const enText = enLine ? (enLine.text || '').replace(/\*\*/g, '') : '';
+      const speakerName = viLine.name || viLine.speaker || 'Speaker';
+      const speakerInitial = speakerName.charAt(0).toUpperCase();
 
-            return `
+      return `
               <div class="dialogue-turn ${speakerClass} clickable-row" id="turn-${i}" data-en="${escapeAttr(enText)}" onclick="app.revealEnglish(${i})">
                 <div class="dialogue-avatar">${speakerInitial}</div>
                 <div class="dialogue-content">
@@ -551,7 +551,7 @@ Make the dialogue feel like a REAL conversation.`;
                 </div>
               </div>
             `;
-          }).join('')}
+    }).join('')}
         </div>
       </div>
     `;
@@ -658,8 +658,8 @@ Make the dialogue feel like a REAL conversation.`;
             <h3 class="connectors-title">🔗 Linking Words / Connectors</h3>
             <div class="connectors-grid">
               ${connectors.map(c => {
-                const color = connectorTypeColors[c.type] || 'var(--accent-secondary)';
-                return `
+      const color = connectorTypeColors[c.type] || 'var(--accent-secondary)';
+      return `
                   <div class="connector-card">
                     <div class="connector-header">
                       <span class="connector-word">${c.word || ''}</span>
@@ -672,7 +672,7 @@ Make the dialogue feel like a REAL conversation.`;
                     ${c.explanation_vi ? `<div class="connector-explanation">📖 ${c.explanation_vi}</div>` : ''}
                   </div>
                 `;
-              }).join('')}
+    }).join('')}
             </div>
           </div>
         ` : ''}
@@ -1094,7 +1094,7 @@ Make the dialogue feel like a REAL conversation.`;
       recognition.continuous = false;
 
       const timeout = setTimeout(() => {
-        try { recognition.stop(); } catch(e) {}
+        try { recognition.stop(); } catch (e) { }
         resolve({ score: 0, spoken: '(hết thời gian)' });
       }, 12000);
 
