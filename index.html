@@ -44,6 +44,7 @@
         <div class="command-bar" id="commandBar">
             <div class="command-input-wrap">
                 <select id="topicSelect" class="command-select" onchange="document.getElementById('customTopicWrap').style.display = this.value === 'custom' ? 'flex' : 'none'">
+                    <option value="custom">✏️ Tự nhập nội dung</option>
                     <option value="it">💻 IT / Công nghệ</option>
                     <option value="gt" selected>🗣️ Giao tiếp</option>
                     <option value="daily">🌅 Hàng ngày</option>
@@ -60,7 +61,6 @@
                     <option value="music">🎵 Âm nhạc</option>
                     <option value="family">👨‍👩‍👧 Gia đình</option>
                     <option value="interview">🎯 Phỏng vấn</option>
-                    <option value="custom">✏️ Tự nhập nội dung</option>
                 </select>
                 <div id="customTopicWrap" class="custom-topic-wrap" style="display:none;">
                     <input type="text" id="customTopicInput" class="custom-topic-input" placeholder="Nhập nội dung bạn muốn... (VD: Hỏi đường đến bệnh viện)" autocomplete="off">
