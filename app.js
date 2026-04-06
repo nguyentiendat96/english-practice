@@ -30,6 +30,9 @@
   function init() {
     loadVoices();
     renderHistory();
+    // Load saved theme
+    const savedTheme = localStorage.getItem('app_theme') || '';
+    if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
   }
 
   // ============================================
@@ -116,6 +119,8 @@
     const existing = document.getElementById('settingsModal');
     if (existing) existing.remove();
 
+    const savedT = localStorage.getItem('app_theme') || '';
+
     const modal = document.createElement('div');
     modal.id = 'settingsModal';
     modal.className = 'settings-modal-overlay';
@@ -139,6 +144,17 @@
         <div class="settings-info">
           💡 ElevenLabs cho giọng nói tự nhiên hơn. Nếu không có key, sẽ dùng giọng trình duyệt.
         </div>
+        <div class="settings-group">
+          <label>🎨 Giao diện màu</label>
+          <div class="theme-picker" id="themePicker">
+            <button class="theme-dot ${!savedT ? 'active' : ''}" data-theme="" style="background:linear-gradient(135deg,#0a0e1a,#6c5ce7)" title="Tím (mặc định)" onclick="app.previewTheme('')"></button>
+            <button class="theme-dot ${savedT==='midnight' ? 'active' : ''}" data-theme="midnight" style="background:linear-gradient(135deg,#0b1628,#3b82f6)" title="Xanh đêm" onclick="app.previewTheme('midnight')"></button>
+            <button class="theme-dot ${savedT==='ocean' ? 'active' : ''}" data-theme="ocean" style="background:linear-gradient(135deg,#042f2e,#14b8a6)" title="Đại dương" onclick="app.previewTheme('ocean')"></button>
+            <button class="theme-dot ${savedT==='rose' ? 'active' : ''}" data-theme="rose" style="background:linear-gradient(135deg,#1a0a1a,#ec4899)" title="Hồng" onclick="app.previewTheme('rose')"></button>
+            <button class="theme-dot ${savedT==='warm' ? 'active' : ''}" data-theme="warm" style="background:linear-gradient(135deg,#1c1410,#f59e0b)" title="Ấm" onclick="app.previewTheme('warm')"></button>
+            <button class="theme-dot ${savedT==='light' ? 'active' : ''}" data-theme="light" style="background:linear-gradient(135deg,#f8fafc,#6c5ce7)" title="Sáng" onclick="app.previewTheme('light')"></button>
+          </div>
+        </div>
         <div class="settings-actions">
           <button class="settings-cancel" onclick="document.getElementById('settingsModal').remove()">Hủy</button>
           <button class="settings-save" onclick="app.saveSettings()">💾 Lưu</button>
@@ -157,8 +173,23 @@
     if (minimax !== undefined) setApiKey(minimax);
     if (elevenlabs !== undefined) setElevenLabsKey(elevenlabs);
     if (elVoice) setElevenLabsVoice(elVoice);
+    // Save current theme
+    const currentTheme = document.documentElement.getAttribute('data-theme') || '';
+    localStorage.setItem('app_theme', currentTheme);
     document.getElementById('settingsModal')?.remove();
     showToast('✅ Đã lưu cài đặt!');
+  }
+
+  function previewTheme(theme) {
+    if (theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+    // Update active dot
+    document.querySelectorAll('.theme-dot').forEach(d => {
+      d.classList.toggle('active', (d.getAttribute('data-theme') || '') === theme);
+    });
   }
 
   // ============================================
@@ -1404,6 +1435,7 @@ Make the dialogue feel like a REAL conversation.`;
     sendChat,
     promptApiKey,
     saveSettings,
+    previewTheme,
   };
 
   // --- Start ---

@@ -50,6 +50,87 @@
   --max-width: 1100px;
 }
 
+/* Theme: Midnight Blue */
+[data-theme="midnight"] {
+  --bg-primary: #0b1628;
+  --bg-secondary: #0f1f3d;
+  --bg-card: #152244;
+  --bg-card-hover: #1c2d55;
+  --bg-elevated: #1e3260;
+  --bg-input: #102040;
+  --accent-primary: #3b82f6;
+  --accent-secondary: #60a5fa;
+  --accent-glow: rgba(59, 130, 246, 0.3);
+  --border-accent: rgba(59, 130, 246, 0.3);
+  --shadow-glow: 0 0 30px rgba(59, 130, 246, 0.15);
+}
+
+/* Theme: Ocean */
+[data-theme="ocean"] {
+  --bg-primary: #042f2e;
+  --bg-secondary: #064e3b;
+  --bg-card: #065f46;
+  --bg-card-hover: #047857;
+  --bg-elevated: #059669;
+  --bg-input: #053e35;
+  --accent-primary: #14b8a6;
+  --accent-secondary: #5eead4;
+  --accent-glow: rgba(20, 184, 166, 0.3);
+  --border-accent: rgba(20, 184, 166, 0.3);
+  --shadow-glow: 0 0 30px rgba(20, 184, 166, 0.15);
+}
+
+/* Theme: Rose */
+[data-theme="rose"] {
+  --bg-primary: #1a0a1a;
+  --bg-secondary: #2d1230;
+  --bg-card: #3d1a40;
+  --bg-card-hover: #4d2250;
+  --bg-elevated: #552858;
+  --bg-input: #2a1028;
+  --accent-primary: #ec4899;
+  --accent-secondary: #f472b6;
+  --accent-glow: rgba(236, 72, 153, 0.3);
+  --border-accent: rgba(236, 72, 153, 0.3);
+  --shadow-glow: 0 0 30px rgba(236, 72, 153, 0.15);
+}
+
+/* Theme: Warm */
+[data-theme="warm"] {
+  --bg-primary: #1c1410;
+  --bg-secondary: #292018;
+  --bg-card: #352a20;
+  --bg-card-hover: #42342a;
+  --bg-elevated: #4a3c32;
+  --bg-input: #28201a;
+  --accent-primary: #f59e0b;
+  --accent-secondary: #fbbf24;
+  --accent-glow: rgba(245, 158, 11, 0.3);
+  --border-accent: rgba(245, 158, 11, 0.3);
+  --shadow-glow: 0 0 30px rgba(245, 158, 11, 0.15);
+}
+
+/* Theme: Light */
+[data-theme="light"] {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f0f0f5;
+  --bg-elevated: #e8ecf2;
+  --bg-input: #f1f5f9;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --text-accent: #6c5ce7;
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-medium: rgba(0, 0, 0, 0.1);
+  --border-accent: rgba(108, 92, 231, 0.2);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.12);
+  --shadow-glow: 0 0 30px rgba(108, 92, 231, 0.1);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -1943,4 +2024,32 @@ select.settings-input {
 .settings-save:hover {
   background: linear-gradient(135deg, #7c6cf0, #9b6cf6);
   transform: translateY(-1px);
+}
+
+/* Theme Picker */
+.theme-picker {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.theme-dot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.theme-dot:hover {
+  transform: scale(1.15);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+.theme-dot.active {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 2px var(--accent-primary), 0 4px 16px rgba(0,0,0,0.4);
+  transform: scale(1.1);
 }
