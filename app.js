@@ -40,15 +40,27 @@
     const levelSelect = document.getElementById('levelSelect');
     const turnsSelect = document.getElementById('turnsSelect');
     const sentenceLengthSelect = document.getElementById('sentenceLengthSelect');
+    const customInput = document.getElementById('customTopicInput');
     if (!topicSelect || !levelSelect) return;
 
     const type = topicSelect.value;
     const level = levelSelect.value;
     const turns = turnsSelect ? parseInt(turnsSelect.value) : 10;
     const sentenceLength = sentenceLengthSelect ? sentenceLengthSelect.value : 'medium';
+
+    let customTopic = '';
+    if (type === 'custom') {
+      customTopic = (customInput ? customInput.value : '').trim();
+      if (!customTopic) {
+        showToast('❌ Vui lòng nhập nội dung bạn muốn!');
+        if (customInput) customInput.focus();
+        return;
+      }
+    }
+
     const cmd = `/${type} ${level}`;
     currentCommand = cmd;
-    generateDBD(cmd, turns, sentenceLength);
+    generateDBD(cmd, turns, sentenceLength, customTopic);
   }
 
   function quickCommand(type, level) {
@@ -187,7 +199,7 @@
     'long': 'Make each sentence LONG and detailed: 30-50 words per sentence.',
   };
 
-  async function generateDBD(command, turns = 10, sentenceLength = 'medium') {
+  async function generateDBD(command, turns = 10, sentenceLength = 'medium', customTopic = '') {
     // Check API key
     let apiKey = getApiKey();
     if (!apiKey) {
@@ -207,7 +219,7 @@
 
     const type = match[1].toLowerCase();
     const level = match[2].toUpperCase();
-    const topic = topicMap[type] || `General conversation about ${type}`;
+    const topic = (type === 'custom' && customTopic) ? customTopic : (topicMap[type] || `General conversation about ${type}`);
     const levelDesc = levelDescriptions[level] || levelDescriptions['B1'];
 
     // Show loading

@@ -200,6 +200,7 @@ button, a, select {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .command-select {
@@ -237,6 +238,36 @@ button, a, select {
   flex: 0 0 auto;
   min-width: 100px;
   max-width: 120px;
+}
+
+.custom-topic-wrap {
+  flex: 1 1 100%;
+  margin-top: 8px;
+}
+
+.custom-topic-input {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 2px solid var(--accent-orange);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s;
+  box-sizing: border-box;
+}
+
+.custom-topic-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 20px var(--accent-glow);
+  outline: none;
+}
+
+.custom-topic-input::placeholder {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: 13px;
 }
 
 .command-prefix {
