@@ -88,6 +88,9 @@
     deferWork(() => {
       loadVoices();
     });
+    deferWork(() => {
+      initSelectionTranslator();
+    });
   }
 
   // ============================================
@@ -129,11 +132,7 @@
     executeCommand();
   }
 
-  // ============================================
-  // API CONFIG (Cerebras only — private project)
-  // ============================================
   const CEREBRAS_API_URL = 'https://api.cerebras.ai/v1/chat/completions';
-  const CEREBRAS_API_KEY = 'csk-5edxpmev6y9nvc2wxkmjx9ynxr5r3xhv4f52yyeneff2v83r';
   const CEREBRAS_MODEL = 'qwen-3-235b-a22b-instruct-2507';
   const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
 
@@ -147,9 +146,9 @@
     { id: 'TxGEqnHWrfWFTfGW9XjX', name: 'Josh (Nam)' },
   ];
 
-  // --- ElevenLabs ---
+  // --- API Key Helpers ---
   function getElevenLabsKey() {
-    return 'a2c351511388d19b182e482ec391e4b9a41f588bc0d9e20c';
+    return localStorage.getItem('elevenlabs_api_key') || '';
   }
   function setElevenLabsKey(key) {
     localStorage.setItem('elevenlabs_api_key', key.trim());
@@ -160,9 +159,12 @@
   function setElevenLabsVoice(id) {
     localStorage.setItem('elevenlabs_voice', id);
   }
-
-  // Key validation (always has key)
-  function getCurrentAIKey() { return CEREBRAS_API_KEY; }
+  function getCurrentAIKey() {
+    return localStorage.getItem('cerebras_api_key') || '';
+  }
+  function setAIKey(key) {
+    localStorage.setItem('cerebras_api_key', key.trim());
+  }
 
   // ============================================
   // AI CALL (Cerebras — Qwen 3 235B)
@@ -205,13 +207,15 @@
     if (existing) existing.remove();
 
     const savedT = localStorage.getItem('app_theme') || 'dark';
+    const savedAI = getCurrentAIKey();
+    const savedEL = getElevenLabsKey();
 
     const modal = document.createElement('div');
     modal.id = 'settingsModal';
     modal.className = 'settings-modal-overlay';
     modal.innerHTML = `
       <div class="settings-modal">
-        <h3>⚙️ Cài đặt</h3>
+        <h3>⚙️ Cài đặt API & Giao diện</h3>
         
         <div class="settings-group">
           <label>🎨 Giao diện</label>
@@ -222,20 +226,25 @@
         </div>
 
         <div class="settings-group">
-          <label>🧠 AI Engine</label>
-          <div class="settings-input" style="background:var(--bg-secondary);cursor:default;opacity:0.8;">🧠 Cerebras / Qwen 3 235B — <span style="color:var(--text-primary);font-weight:bold;">Đã kết nối</span></div>
+          <label>🧠 Cerebras API Key (Cần thiết để tạo bài)</label>
+          <input type="password" id="settingsAIKey" class="settings-input" placeholder="Nhập csk-..." value="${savedAI}">
+          <small style="color:var(--text-muted);display:block;margin-top:4px;">Bạn có thể lấy Key miễn phí tại <a href="https://cloud.cerebras.ai/" target="_blank" style="color:var(--accent-primary)">cloud.cerebras.ai</a></small>
         </div>
 
         <div class="settings-group">
-          <label>🎙️ Giọng ElevenLabs</label>
-          <select id="settingsELVoice" class="settings-input">
-            ${elevenLabsVoices.map(v => `<option value="${v.id}" ${v.id === getElevenLabsVoice() ? 'selected' : ''}>${v.name}</option>`).join('')}
-          </select>
+          <label>🎙️ ElevenLabs API Key (Tùy chọn cho giọng đọc hay)</label>
+          <input type="password" id="settingsELKey" class="settings-input" placeholder="Nhập ElevenLabs Key..." value="${savedEL}">
+          <div style="margin-top:8px;">
+            <label style="font-size:12px;margin-bottom:4px;">Chọn giọng đọc:</label>
+            <select id="settingsELVoice" class="settings-input">
+              ${elevenLabsVoices.map(v => `<option value="${v.id}" ${v.id === getElevenLabsVoice() ? 'selected' : ''}>${v.name}</option>`).join('')}
+            </select>
+          </div>
         </div>
 
         <div class="settings-actions">
           <button class="settings-cancel" onclick="document.getElementById('settingsModal').remove()">Hủy</button>
-          <button class="settings-save" onclick="app.saveSettings()">💾 Lưu</button>
+          <button class="settings-save" onclick="app.saveSettings()">💾 Lưu cài đặt</button>
         </div>
       </div>
     `;
@@ -244,16 +253,19 @@
   }
 
   function saveSettings() {
+    const aiKey = document.getElementById('settingsAIKey')?.value;
+    const elKey = document.getElementById('settingsELKey')?.value;
     const elVoice = document.getElementById('settingsELVoice')?.value;
+
+    if (aiKey) setAIKey(aiKey);
+    if (elKey) setElevenLabsKey(elKey);
     if (elVoice) setElevenLabsVoice(elVoice);
     
-    // Theme is saved via previewTheme immediately or we can grab from sessionStorage etc.
-    // Let's just grab the active button or global state.
     const activeTheme = document.documentElement.getAttribute('data-theme') || 'dark';
     localStorage.setItem('app_theme', activeTheme);
 
     document.getElementById('settingsModal')?.remove();
-    showToast('✅ Đã lưu cài đặt!');
+    showToast('✅ Đã lưu cài đặt an toàn!');
   }
 
   function previewTheme(theme) {
@@ -665,6 +677,7 @@ JSON format:
                   <div class="dialogue-detail" id="vi-toggle-${i}" style="display:none;">
                     <div class="detail-vi">🇻🇳 ${viText}</div>
                     ${analysis ? `<div class="detail-tags">${analysis}</div>` : ''}
+                  </div>
                   </div>
                 </div>
                 <div class="dialogue-actions" onclick="event.stopPropagation()">
@@ -1572,6 +1585,125 @@ JSON format:
     if (hours < 24) return hours + ' giờ trước';
     const days = Math.floor(hours / 24);
     return days + ' ngày trước';
+  }
+
+  // ============================================
+  // SELECTION TRANSLATOR
+  // ============================================
+  let translationTrigger = null;
+  let translationPopup = null;
+  let lastSelectedText = '';
+
+  function initSelectionTranslator() {
+    document.addEventListener('mouseup', handleSelection);
+    document.addEventListener('keyup', handleSelection);
+    document.addEventListener('touchend', handleSelection);
+    document.addEventListener('mousedown', (e) => {
+      if (translationTrigger && !translationTrigger.contains(e.target)) hideTrigger();
+      if (translationPopup && !translationPopup.contains(e.target)) hidePopup();
+    });
+  }
+
+  function handleSelection(e) {
+    // Delay slightly to let selection finish
+    setTimeout(() => {
+      const selection = window.getSelection();
+      const text = selection.toString().trim();
+      
+      if (!text || text.length < 2 || text.length > 500) {
+        if (e.target !== translationTrigger) hideTrigger();
+        return;
+      }
+
+      if (text === lastSelectedText && translationTrigger) return;
+      lastSelectedText = text;
+
+      // Get range coordinates
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+
+      showTrigger(rect.left + rect.width / 2, rect.top - 10);
+    }, 10);
+  }
+
+  function showTrigger(x, y) {
+    if (!translationTrigger) {
+      translationTrigger = document.createElement('div');
+      translationTrigger.className = 'translation-trigger';
+      translationTrigger.innerHTML = '🧠';
+      translationTrigger.onclick = (e) => {
+        e.stopPropagation();
+        translateSelectedText(lastSelectedText);
+        hideTrigger();
+      };
+      document.body.appendChild(translationTrigger);
+    }
+    
+    translationTrigger.style.display = 'flex';
+    // Position above selection
+    const triggerX = Math.min(window.innerWidth - 40, Math.max(10, x - 19));
+    const triggerY = Math.max(10, y - 40);
+    translationTrigger.style.left = `${triggerX}px`;
+    translationTrigger.style.top = `${triggerY}px`;
+  }
+
+  function hideTrigger() {
+    if (translationTrigger) translationTrigger.style.display = 'none';
+  }
+
+  function hidePopup() {
+    if (translationPopup) {
+      translationPopup.remove();
+      translationPopup = null;
+    }
+  }
+
+  async function translateSelectedText(text) {
+    hidePopup();
+    
+    // Create skeleton/loading popup
+    translationPopup = document.createElement('div');
+    translationPopup.className = 'translation-popup';
+    translationPopup.innerHTML = `
+      <div class="trans-popup-loading">
+        <div class="trans-spinner"></div>
+        <span>Đang dịch...</span>
+      </div>
+    `;
+    document.body.appendChild(translationPopup);
+
+    // Position popup near the trigger position (approximately)
+    const triggerRect = translationTrigger.getBoundingClientRect();
+    const popupX = Math.min(window.innerWidth - 240, Math.max(20, triggerRect.left - 100));
+    const popupY = Math.max(20, triggerRect.top - 120);
+    translationPopup.style.left = `${popupX}px`;
+    translationPopup.style.top = `${popupY}px`;
+
+    try {
+      const apiKey = getCurrentAIKey();
+      if (!apiKey) {
+        translationPopup.innerHTML = '<div style="color:var(--accent-pink);font-size:13px;">❌ Hãy cài đặt API Key trước!</div>';
+        return;
+      }
+
+      const result = await callAI(
+        'You are an English-Vietnamese dictionary. Output ONLY JSON: {"trans":"Vietnamese meaning","ipa":"phonetic","usage":"1 short example sentence in VN"}',
+        `Translate this English word/phrase: "${text}"`,
+        { maxTokens: 200, temperature: 0.3, jsonMode: true }
+      );
+
+      let data = null;
+      try { data = JSON.parse(result); } catch(err) { data = { trans: result }; }
+
+      translationPopup.innerHTML = `
+        <div class="trans-popup-word">${text.length > 20 ? text.substring(0, 17) + '...' : text}</div>
+        ${data.ipa ? `<div class="trans-popup-ipa">${data.ipa}</div>` : ''}
+        <div class="trans-popup-meaning">🇻🇳 ${data.trans}</div>
+        ${data.usage ? `<div class="trans-popup-usage">${data.usage}</div>` : ''}
+      `;
+    } catch (err) {
+      translationPopup.innerHTML = `<div style="color:var(--text-muted);font-size:12px;">❌ Lỗi: ${err.message}</div>`;
+    }
   }
 
   // ============================================

@@ -60,13 +60,14 @@
                     <option value="1.15">1.15x Hơi nhanh</option>
                     <option value="1.3">1.3x Rất nhanh</option>
                 </select>
-                <button class="voice-label" style="cursor:pointer;background:none;border:none;font-size:18px;" onclick="app.promptApiKey()" title="API Key Settings">⚙️</button>
             </div>
         </header>
 
         <!-- Command Bar -->
         <div class="command-bar" id="commandBar">
-            <div class="command-input-wrap">
+                <button class="command-btn" onclick="app.promptApiKey()" title="Cài đặt API">⚙️</button>
+                <div class="command-divider"></div>
+                <div class="command-badge">🧠 Cerebras AI</div>
                 <select id="topicSelect" class="command-select" onchange="document.getElementById('customTopicWrap').style.display = this.value === 'custom' ? 'flex' : 'none'">
                     <option value="custom">✏️ Tự nhập nội dung</option>
                     <option value="it">💻 IT / Công nghệ</option>
@@ -203,6 +204,6 @@
         <span class="toast-message" id="toastMessage"></span>
     </div>
 
-    <script src="app.js?v=19" defer></script>
+    <script src="app.js?v=22" defer></script>
 </body>
 </html>
