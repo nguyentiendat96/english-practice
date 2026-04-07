@@ -1,14 +1,34 @@
 require('dotenv').config();
 const express = require('express');
+const compression = require('compression');
 const app = express();
 const PORT = 8765;
+
+// Enable gzip compression for all responses
+app.use(compression());
 
 // MiniMax M2.5 API (key loaded from .env)
 const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY;
 const MINIMAX_API_URL = 'https://api.minimax.io/v1/chat/completions';
 
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static(__dirname));
+
+// Serve static files with caching headers
+app.use(express.static(__dirname, {
+  maxAge: 0,            // Disable cache for dev
+  etag: true,           // Enable ETag for conditional requests
+  lastModified: true,   // Enable Last-Modified header
+  setHeaders: (res, path) => {
+    // Longer cache for fonts/images
+    if (path.endsWith('.woff2') || path.endsWith('.woff') || path.endsWith('.ttf')) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
+    }
+    // Dev: no cache for HTML/JS/CSS to avoid stale files
+    if (path.endsWith('.css') || path.endsWith('.js') || path.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  }
+}));
 
 // ============================================
 // ENGLISH DBD - Generate Dialogue + Analysis
@@ -18,8 +38,8 @@ app.post('/api/dbd', async (req, res) => {
     const { command } = req.body;
     if (!command) return res.status(400).json({ error: 'No command provided' });
 
-    // Parse command: /type level (e.g., /it a1, /gt b1)
-    const match = command.trim().match(/^\/?(\w+)\s+(a1|a2|b1|b2)$/i);
+    // Parse command: /type level (e.g., /it a1, /gt a2-b1)
+    const match = command.trim().match(/^\/?(\w+)\s+(a1|a2|b1|b2|a1-a2|a2-b1|b1-b2)$/i);
     if (!match) {
       return res.json({ error: 'Invalid command. Use format: /type level (e.g., /it a1, /gt b1)' });
     }

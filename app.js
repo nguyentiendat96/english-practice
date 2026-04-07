@@ -75,12 +75,19 @@
 
   // --- Init ---
   function init() {
-    initHistory();
-    loadVoices();
-    renderHistory();
-    // Load saved theme
+    // Fast: read theme immediately (tiny localStorage read)
     const savedTheme = localStorage.getItem('app_theme') || '';
     if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+
+    // Defer heavy work to after first paint
+    const deferWork = window.requestIdleCallback || ((cb) => setTimeout(cb, 50));
+    deferWork(() => {
+      initHistory();
+      renderHistory();
+    });
+    deferWork(() => {
+      loadVoices();
+    });
   }
 
   // ============================================
@@ -96,8 +103,8 @@
 
     const type = topicSelect.value;
     const level = levelSelect.value;
-    const turns = turnsSelect ? parseInt(turnsSelect.value) : 10;
-    const sentenceLength = sentenceLengthSelect ? sentenceLengthSelect.value : 'medium';
+    const turns = turnsSelect ? parseInt(turnsSelect.value) : 15;
+    const sentenceLength = sentenceLengthSelect ? sentenceLengthSelect.value : 'long';
 
     let customTopic = '';
     if (type === 'custom') {
@@ -123,9 +130,11 @@
   }
 
   // ============================================
-  // API KEY MANAGEMENT
+  // API CONFIG (Cerebras only — private project)
   // ============================================
-  const MINIMAX_API_URL = 'https://api.minimax.io/v1/chat/completions';
+  const CEREBRAS_API_URL = 'https://api.cerebras.ai/v1/chat/completions';
+  const CEREBRAS_API_KEY = 'csk-5edxpmev6y9nvc2wxkmjx9ynxr5r3xhv4f52yyeneff2v83r';
+  const CEREBRAS_MODEL = 'qwen-3-235b-a22b-instruct-2507';
   const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
 
   // ElevenLabs voices
@@ -138,71 +147,92 @@
     { id: 'TxGEqnHWrfWFTfGW9XjX', name: 'Josh (Nam)' },
   ];
 
-  function getApiKey() {
-    return localStorage.getItem('minimax_api_key') || '';
-  }
-
-  function setApiKey(key) {
-    localStorage.setItem('minimax_api_key', key.trim());
-  }
-
+  // --- ElevenLabs ---
   function getElevenLabsKey() {
-    return localStorage.getItem('elevenlabs_api_key') || '';
+    return 'a2c351511388d19b182e482ec391e4b9a41f588bc0d9e20c';
   }
-
   function setElevenLabsKey(key) {
     localStorage.setItem('elevenlabs_api_key', key.trim());
   }
-
   function getElevenLabsVoice() {
     return localStorage.getItem('elevenlabs_voice') || '21m00Tcm4TlvDq8ikWAM';
   }
-
   function setElevenLabsVoice(id) {
     localStorage.setItem('elevenlabs_voice', id);
   }
 
+  // Key validation (always has key)
+  function getCurrentAIKey() { return CEREBRAS_API_KEY; }
+
+  // ============================================
+  // AI CALL (Cerebras — Qwen 3 235B)
+  // ============================================
+  async function callAI(systemPrompt, userMessage, options = {}) {
+    const maxTokens = options.maxTokens || 4500;
+    const temperature = options.temperature || 0.7;
+    const jsonMode = options.jsonMode || false;
+
+    const body = {
+      model: CEREBRAS_MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage },
+      ],
+      max_tokens: maxTokens,
+      temperature,
+    };
+    if (jsonMode) {
+      body.response_format = { type: 'json_object' };
+    }
+
+    const response = await fetch(CEREBRAS_API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${CEREBRAS_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message || 'Cerebras API error');
+    if (data.choices && data.choices.length > 0) return data.choices[0].message.content;
+    throw new Error('Không nhận được phản hồi từ AI');
+  }
+
   function promptApiKey() {
-    // Build settings modal
     const existing = document.getElementById('settingsModal');
     if (existing) existing.remove();
 
-    const savedT = localStorage.getItem('app_theme') || '';
+    const savedT = localStorage.getItem('app_theme') || 'dark';
 
     const modal = document.createElement('div');
     modal.id = 'settingsModal';
     modal.className = 'settings-modal-overlay';
     modal.innerHTML = `
       <div class="settings-modal">
-        <h3>⚙️ Cài đặt API Keys</h3>
+        <h3>⚙️ Cài đặt</h3>
+        
         <div class="settings-group">
-          <label>🤖 MiniMax API Key <span style="color:var(--text-muted);font-size:11px;">(tạo bài học)</span></label>
-          <input type="password" id="settingsMinimax" class="settings-input" placeholder="Nhập MiniMax API Key..." value="${getApiKey()}">
+          <label>🎨 Giao diện</label>
+          <div style="display:flex;gap:10px;">
+            <button class="settings-input theme-btn ${savedT==='dark'?'active':''}" onclick="app.previewTheme('dark')" style="flex:1;background:#111;color:#fff;border-color:${savedT==='dark'?'#fff':'#333'}">🌑 Tối (Carbon)</button>
+            <button class="settings-input theme-btn ${savedT==='light'?'active':''}" onclick="app.previewTheme('light')" style="flex:1;background:#fff;color:#000;border-color:${savedT==='light'?'#000':'#ccc'}">☀️ Sáng (Light)</button>
+          </div>
         </div>
+
         <div class="settings-group">
-          <label>🔊 ElevenLabs API Key <span style="color:var(--text-muted);font-size:11px;">(giọng AI cao cấp)</span></label>
-          <input type="password" id="settingsElevenlabs" class="settings-input" placeholder="Nhập ElevenLabs API Key..." value="${getElevenLabsKey()}">
+          <label>🧠 AI Engine</label>
+          <div class="settings-input" style="background:var(--bg-secondary);cursor:default;opacity:0.8;">🧠 Cerebras / Qwen 3 235B — <span style="color:var(--text-primary);font-weight:bold;">Đã kết nối</span></div>
         </div>
+
         <div class="settings-group">
           <label>🎙️ Giọng ElevenLabs</label>
           <select id="settingsELVoice" class="settings-input">
             ${elevenLabsVoices.map(v => `<option value="${v.id}" ${v.id === getElevenLabsVoice() ? 'selected' : ''}>${v.name}</option>`).join('')}
           </select>
         </div>
-        <div class="settings-info">
-          💡 ElevenLabs cho giọng nói tự nhiên hơn. Nếu không có key, sẽ dùng giọng trình duyệt.
-        </div>
-        <div class="settings-group">
-          <label>🎨 Giao diện màu</label>
-          <div class="theme-picker" id="themePicker">
-            <button class="theme-dot ${!savedT ? 'active' : ''}" data-theme="" style="background:linear-gradient(135deg,#0a0e1a,#6c5ce7)" title="Tím (mặc định)" onclick="app.previewTheme('')"></button>
-            <button class="theme-dot ${savedT==='midnight' ? 'active' : ''}" data-theme="midnight" style="background:linear-gradient(135deg,#0b1628,#3b82f6)" title="Xanh đêm" onclick="app.previewTheme('midnight')"></button>
-            <button class="theme-dot ${savedT==='ocean' ? 'active' : ''}" data-theme="ocean" style="background:linear-gradient(135deg,#042f2e,#14b8a6)" title="Đại dương" onclick="app.previewTheme('ocean')"></button>
-            <button class="theme-dot ${savedT==='rose' ? 'active' : ''}" data-theme="rose" style="background:linear-gradient(135deg,#1a0a1a,#ec4899)" title="Hồng" onclick="app.previewTheme('rose')"></button>
-            <button class="theme-dot ${savedT==='warm' ? 'active' : ''}" data-theme="warm" style="background:linear-gradient(135deg,#1c1410,#f59e0b)" title="Ấm" onclick="app.previewTheme('warm')"></button>
-            <button class="theme-dot ${savedT==='light' ? 'active' : ''}" data-theme="light" style="background:linear-gradient(135deg,#f8fafc,#6c5ce7)" title="Sáng" onclick="app.previewTheme('light')"></button>
-          </div>
-        </div>
+
         <div class="settings-actions">
           <button class="settings-cancel" onclick="document.getElementById('settingsModal').remove()">Hủy</button>
           <button class="settings-save" onclick="app.saveSettings()">💾 Lưu</button>
@@ -210,33 +240,29 @@
       </div>
     `;
     document.body.appendChild(modal);
-    modal.querySelector('#settingsMinimax').focus();
     return true;
   }
 
   function saveSettings() {
-    const minimax = document.getElementById('settingsMinimax')?.value;
-    const elevenlabs = document.getElementById('settingsElevenlabs')?.value;
     const elVoice = document.getElementById('settingsELVoice')?.value;
-    if (minimax !== undefined) setApiKey(minimax);
-    if (elevenlabs !== undefined) setElevenLabsKey(elevenlabs);
     if (elVoice) setElevenLabsVoice(elVoice);
-    // Save current theme
-    const currentTheme = document.documentElement.getAttribute('data-theme') || '';
-    localStorage.setItem('app_theme', currentTheme);
+    
+    // Theme is saved via previewTheme immediately or we can grab from sessionStorage etc.
+    // Let's just grab the active button or global state.
+    const activeTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    localStorage.setItem('app_theme', activeTheme);
+
     document.getElementById('settingsModal')?.remove();
     showToast('✅ Đã lưu cài đặt!');
   }
 
   function previewTheme(theme) {
-    if (theme) {
-      document.documentElement.setAttribute('data-theme', theme);
-    } else {
-      document.documentElement.removeAttribute('data-theme');
-    }
-    // Update active dot
-    document.querySelectorAll('.theme-dot').forEach(d => {
-      d.classList.toggle('active', (d.getAttribute('data-theme') || '') === theme);
+    document.documentElement.setAttribute('data-theme', theme);
+    // Update button active states in modal
+    const btns = document.querySelectorAll('.theme-btn');
+    btns.forEach(b => {
+      const isTarget = b.textContent.toLowerCase().includes(theme === 'dark' ? 'tối' : 'sáng');
+      b.style.borderColor = isTarget ? (theme === 'dark' ? '#fff' : '#000') : (theme === 'dark' ? '#333' : '#ccc');
     });
   }
 
@@ -263,10 +289,13 @@
   };
 
   const levelDescriptions = {
-    'A1': 'Beginner - Use very simple words, short sentences (8-15 words). Basic present tense mostly.',
-    'A2': 'Elementary - Simple but slightly longer sentences (12-20 words). Present, past simple tenses.',
-    'B1': 'Intermediate - Natural sentences (20-35 words). Mix of tenses including present perfect, conditionals.',
-    'B2': 'Upper-Intermediate - Advanced natural sentences (30-50 words). All tenses, passive voice, reported speech.',
+    'A1': 'Beginner - Very simple vocabulary (go, eat, like, want). Short sentences 8-15 words. Basic present tense. Example: "I want to go to the store."',
+    'A1-A2': 'Bridging A1 and A2 - Start with basic present tense but introduce past simple and common verbs like "suggest" or "prefer" as the dialogue progresses.',
+    'A2': 'Elementary - Common vocabulary (prefer, suggest, improve). Sentences 12-20 words. Past simple, future. Example: "Yesterday I went to a nice restaurant and tried the local food."',
+    'A2-B1': 'Bridging A2 and B1 - Transition from common everyday language to intermediate vocabulary (appreciate, recommend). Introduce more complex clauses and present perfect.',
+    'B1': 'Intermediate - Rich vocabulary (appreciate, recommend, meanwhile, eventually, opportunity, significant). Complex sentences 20-35 words with clauses. Present perfect, conditionals, passive. Example: "I have been considering this opportunity for a while, and I think it would be a significant step forward in my career."',
+    'B1-B2': 'Bridging B1 and B2 - Move from intermediate to advanced proficiency. Include sophisticated vocabulary (anticipate, comprehensive) and advanced grammar like subjunctive or inversions toward the end.',
+    'B2': 'Upper-Intermediate - Advanced vocabulary (predominantly, anticipate, consequently, elaborate, nevertheless, comprehensive). Long complex sentences 30-50 words. All tenses, subjunctive, inversions. Example: "Had I known about the comprehensive restructuring that was being anticipated by the management, I would have prepared my presentation more thoroughly."',
   };
 
   // ============================================
@@ -280,19 +309,18 @@
 
   async function generateDBD(command, turns = 10, sentenceLength = 'medium', customTopic = '') {
     // Check API key
-    let apiKey = getApiKey();
-    if (!apiKey) {
+    if (!getCurrentAIKey()) {
       if (!promptApiKey()) {
         showToast('❌ Cần API Key để tạo bài học');
         return;
       }
-      apiKey = getApiKey();
+      if (!getCurrentAIKey()) return;
     }
 
     // Parse command
-    const match = command.trim().match(/^\/?(\w+)\s+(a1|a2|b1|b2)$/i);
+    const match = command.trim().match(/^\/?(\w+)\s+(a1|a2|b1|b2|a1-a2|a2-b1|b1-b2)$/i);
     if (!match) {
-      showToast('❌ Sai cú pháp. Ví dụ: /it a1, /gt b1');
+      showToast('❌ Sai cú pháp. Ví dụ: /it a1, /gt a2-b1');
       return;
     }
 
@@ -306,136 +334,94 @@
     dbdResult.style.display = 'none';
     loadingScreen.style.display = 'block';
 
+    // Animated loading steps for better UX
+    const loadingSteps = document.getElementById('loadingSteps');
+    const progressBar = document.getElementById('loadingProgressBar');
+    const steps = [
+      { text: '🔗 Đang kết nối AI...', pct: 10 },
+      { text: '📝 Đang tạo hội thoại...', pct: 30 },
+      { text: '📚 Đang phân tích từ vựng...', pct: 50 },
+      { text: '⏰ Đang phân tích ngữ pháp...', pct: 70 },
+      { text: '🔗 Đang tạo connectors...', pct: 85 },
+      { text: '✨ Sắp xong...', pct: 95 },
+    ];
+    let stepIdx = 0;
+    const stepTimer = setInterval(() => {
+      if (stepIdx < steps.length) {
+        if (loadingSteps) loadingSteps.textContent = steps[stepIdx].text;
+        if (progressBar) progressBar.style.width = steps[stepIdx].pct + '%';
+        stepIdx++;
+      }
+    }, 2000);
+
     const goBtn = document.getElementById('commandGoBtn');
     if (goBtn) { goBtn.disabled = true; goBtn.querySelector('span').textContent = 'Generating...'; }
 
-    const systemPrompt = `You are "English DBD", a practical English teacher. Generate a COMPLETE lesson based on a dialogue.
-
-IMPORTANT: You MUST respond with ONLY a valid JSON object. No markdown, no code fences, no explanations outside JSON.
+    const systemPrompt = `You are "English DBD", an expert English teacher. Output ONLY valid JSON.
 
 Topic: ${topic}
 Level: ${level} - ${levelDesc}
 
-Generate this EXACT JSON structure:
-{
-  "title": "Short title for the dialogue",
-  "topic": "${topic}",
-  "level": "${level}",
-  "dialogue_en": [
-    {"speaker": "A", "name": "Speaker Name", "text": "English sentence with **bolded verbs**."},
-    {"speaker": "B", "name": "Speaker Name", "text": "Response..."}
-  ],
-  "dialogue_vi": [
-    {"speaker": "A", "name": "Same Name", "text": "Vietnamese translation, natural and accurate"},
-    {"speaker": "B", "name": "Same Name", "text": "..."}
-  ],
-  "vocabulary": [
-    {"word": "example", "ipa": "/ɪɡˈzæmpəl/", "meaning": "ví dụ", "example_en": "This is an example.", "example_vi": "Đây là một ví dụ."}
-  ],
-  "tenses": [
-    {"tense": "Present Simple", "example": "I work here (from dialogue line)", "example_vi": "Tôi làm việc ở đây", "usage": "Describe habits and routines", "usage_vi": "Mô tả thói quen và hoạt động thường xuyên", "structure": "S + V(s/es) + O", "explanation_vi": "Dùng khi nói về sự thật, thói quen lặp lại hoặc tình trạng chung."}
-  ],
-  "grammar": [
-    {"type": "Giving opinion", "structure": "I think/believe + clause", "example_en": "I think this project is important.", "example_vi": "Tôi nghĩ dự án này quan trọng.", "explanation": "Used to express personal views"}
-  ],
-  "connectors": [
-    {"word": "however", "type": "Contrast", "type_vi": "Tương phản", "example": "Quote from dialogue using this word", "example_vi": "Dịch tiếng Việt", "explanation_vi": "Dùng để nối 2 ý trái ngược nhau, thường đứng đầu câu."}
-  ]
-}
+Create a dialogue between 2 people with ${turns} turns.
+${level.includes('-') ? 'This is a BRIDGING level. Make the dialogue progress from simpler structures to more complex ones, or have Speaker A use the lower level and Speaker B use the higher level.' : ''}
+Each turn MUST be ${sentenceLengthMap[sentenceLength] || sentenceLengthMap['medium']} NEVER write short sentences like "Hi" or "Sure". Each turn should have meaningful content with multiple clauses.
+Bold all verbs with **verb** format. Use connectors appropriate for ${level}.
+${level === 'B1' ? 'Use intermediate vocabulary: appreciate, opportunity, significant, recommend, eventually, meanwhile, regarding, considerably' : level === 'B2' ? 'Use advanced vocabulary: predominantly, anticipate, comprehensive, elaborate, nevertheless, unprecedented, substantial' : level === 'A2' ? 'Use elementary vocabulary: prefer, suggest, improve, arrange, experience' : 'Use basic vocabulary: want, need, go, eat, buy, like'}
 
-RULES:
-1. dialogue_en: Generate EXACTLY ${turns} turns total. ${sentenceLengthMap[sentenceLength] || sentenceLengthMap['medium']} Bold all verbs with **verb**. Make it realistic, connected, not robotic. IMPORTANT: Use linking words/connectors appropriate for ${level} level throughout the dialogue (e.g., A1: and, but, so, because; A2: also, however, although; B1: moreover, nevertheless, therefore, in spite of; B2: furthermore, consequently, whereas, provided that). Make the conversation flow naturally with these connectors.
-2. dialogue_vi: Translate EXACTLY matching dialogue_en, natural Vietnamese style. Do NOT use ** in Vietnamese.
-3. vocabulary: Extract 8 important words from the dialogue.
-4. tenses: Analyze 4-5 main tenses ACTUALLY USED in the dialogue. For each tense, "example" MUST be a real sentence quoted from the dialogue. Include Vietnamese translation (example_vi), short English usage, Vietnamese usage (usage_vi), structure formula, and a Vietnamese explanation (explanation_vi) that helps learners understand WHEN and WHY to use this tense.
-5. grammar: Exactly 8 structures: Giving opinion, Explaining reason, Result, Condition, Situation, Suggestion, Contrast, Clarifying.
-6. connectors: Extract 5-8 linking words/connectors/conjunctions ACTUALLY USED in the dialogue. Categorize each as Addition/Contrast/Cause/Result/Condition/Time/Purpose. Quote real example from dialogue. Explain in Vietnamese when and how to use each connector.
-7. Keep the TOTAL response under 4000 tokens. Be concise.
-
-Make the dialogue feel like a REAL conversation.`;
+JSON format:
+{"title":"...","topic":"${topic}","level":"${level}","dialogue_en":[{"speaker":"A","name":"Name","text":"English with **bolded verbs**"}],"dialogue_vi":[{"speaker":"A","name":"Name","text":"Vietnamese translation"}]}`;
 
     try {
-      const response = await fetch(MINIMAX_API_URL, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'MiniMax-M2.5',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: `Generate a complete English DBD lesson. Topic: ${topic}. Level: ${level}. Make it engaging and educational.` }
-          ],
-          max_tokens: 8000,
-          temperature: 0.8,
-        }),
-      });
+      const content = await callAI(
+        systemPrompt,
+        `Generate dialogue. Topic: ${topic}. Level: ${level}.`,
+        { maxTokens: 4000, temperature: 0.7, jsonMode: true }
+      );
 
-      const data = await response.json();
+      let result = parseAIResponse(content);
 
-      if (data.error) {
-        loadingScreen.style.display = 'none';
-        welcomeScreen.style.display = 'block';
-        if (data.error.message && data.error.message.includes('auth')) {
-          showToast('❌ API Key không hợp lệ. Bấm ⚙️ để nhập lại.');
-        } else {
-          showToast('❌ ' + (data.error.message || 'API error'));
-        }
-        return;
-      }
+      if (result && result.dialogue_en) {
+        currentData = result;
+        currentData._dataKey = null; // will be set below
 
-      if (data.choices && data.choices.length > 0) {
-        let content = data.choices[0].message.content;
-        content = content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-        content = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-
-        let result = parseAIResponse(content);
-
-        if (result && result.dialogue_en) {
-          currentData = result;
-
-          const ts = Date.now();
-          const dataKey = 'dbdData_' + ts;
-          const metaItem = {
-            command: command,
-            title: result.title || 'Untitled',
-            level: result.level || '',
-            topic: result.topic || '',
-            timestamp: ts,
-            dataKey: dataKey,
-          };
-          // Save data separately
-          try { localStorage.setItem(dataKey, JSON.stringify(result)); } catch(e) { /* quota */ }
-          historyMeta.unshift(metaItem);
-          // Keep max 20, clean up old data
-          while (historyMeta.length > 20) {
-            const removed = historyMeta.pop();
-            if (removed && removed.dataKey) {
-              try { localStorage.removeItem(removed.dataKey); } catch(e) {}
-            }
+        const ts = Date.now();
+        const dataKey = 'dbdData_' + ts;
+        const metaItem = {
+          command: command,
+          title: result.title || 'Untitled',
+          level: result.level || '',
+          topic: result.topic || '',
+          timestamp: ts,
+          dataKey: dataKey,
+        };
+        try { localStorage.setItem(dataKey, JSON.stringify(result)); } catch(e) { /* quota */ }
+        currentData._dataKey = dataKey;
+        historyMeta.unshift(metaItem);
+        while (historyMeta.length > 20) {
+          const removed = historyMeta.pop();
+          if (removed && removed.dataKey) {
+            try { localStorage.removeItem(removed.dataKey); } catch(e) {}
           }
-          saveHistoryMeta();
-
-          loadingScreen.style.display = 'none';
-          dbdResult.style.display = 'block';
-          renderDBDResult(result);
-          showToast('✅ Đã tạo bài học thành công!');
-        } else {
-          loadingScreen.style.display = 'none';
-          welcomeScreen.style.display = 'block';
-          showToast('❌ AI response format error. Try again.');
         }
+        saveHistoryMeta();
+
+        loadingScreen.style.display = 'none';
+        dbdResult.style.display = 'block';
+        renderDBDResult(result);
+        showToast('✅ Đã tạo bài học thành công!');
       } else {
         loadingScreen.style.display = 'none';
         welcomeScreen.style.display = 'block';
-        showToast('❌ No response from AI');
+        showToast('❌ AI response format error. Try again.');
       }
     } catch (err) {
       loadingScreen.style.display = 'none';
       welcomeScreen.style.display = 'block';
       showToast('❌ Lỗi kết nối: ' + err.message);
     } finally {
+      clearInterval(stepTimer);
+      if (progressBar) progressBar.style.width = '0%';
+      if (loadingSteps) loadingSteps.textContent = 'Đang kết nối...';
       if (goBtn) { goBtn.disabled = false; goBtn.querySelector('span').textContent = 'Generate'; }
     }
   }
@@ -512,7 +498,79 @@ Make the dialogue feel like a REAL conversation.`;
     tabs.forEach((t, i) => {
       t.classList.toggle('active', tabMap[i] === tab);
     });
-    renderSection(tab, currentData);
+
+    // Lazy-load: generate tab content if not yet available
+    if (tab === 'vocabulary' && currentData && (!currentData.vocabulary || currentData.vocabulary.length === 0)) {
+      generateTabContent('vocabulary');
+    } else if (tab === 'tenses' && currentData && (!currentData.tenses || currentData.tenses.length === 0)) {
+      generateTabContent('tenses');
+    } else if (tab === 'grammar' && currentData && (!currentData.grammar || currentData.grammar.length === 0)) {
+      generateTabContent('grammar');
+    } else {
+      renderSection(tab, currentData);
+    }
+  }
+
+  // --- Lazy generate tab content ---
+  const _tabGenerating = {};
+  async function generateTabContent(tabName) {
+    if (_tabGenerating[tabName]) return;
+    _tabGenerating[tabName] = true;
+
+    const container = document.getElementById('dbdSectionContent');
+    if (container) {
+      container.innerHTML = `<div style="text-align:center;padding:40px;"><div class="loading-spinner"></div><div style="margin-top:12px;color:var(--text-muted);">\u26a1 \u0110ang t\u1ea1o ${tabName === 'vocabulary' ? 't\u1eeb v\u1ef1ng' : tabName === 'tenses' ? 'ph\u00e2n t\u00edch th\u00ec' : 'ng\u1eef ph\u00e1p'}...</div></div>`;
+    }
+
+    const dialogueText = (currentData.dialogue_en || []).map(d => d.text.replace(/\*\*/g, '')).join('\n');
+    const level = currentData.level || 'B1';
+
+    let prompt = '';
+    let jsonHint = '';
+
+    if (tabName === 'vocabulary') {
+      prompt = `Analyze this ${level}-level English dialogue and extract 8-10 vocabulary words appropriate for ${level} learners. Include IPA pronunciation and Vietnamese meaning.\n\nDialogue:\n${dialogueText}`;
+      jsonHint = '{"vocabulary":[{"word":"...","ipa":"...","meaning":"Vietnamese","example_en":"...","example_vi":"..."}]}';
+    } else if (tabName === 'tenses') {
+      prompt = `Analyze this ${level}-level English dialogue. Extract 4-5 tenses used with examples from the dialogue. Provide 'usage' in English and 'usage_vi' in Vietnamese.\n\nDialogue:\n\n${dialogueText}`;
+      jsonHint = '{"tenses":[{"tense":"...","example":"from dialogue","example_vi":"...","usage":"English usage","usage_vi":"Vietnamese usage","structure":"...","explanation_vi":"..."}]}';
+    } else if (tabName === 'grammar') {
+      prompt = `Analyze this ${level}-level English dialogue. Extract 6-8 grammar patterns and 5-8 connectors used. Include Vietnamese explanations.\n\nDialogue:\n${dialogueText}`;
+      jsonHint = '{"grammar":[{"type":"...","structure":"...","example_en":"...","example_vi":"...","explanation":"..."}],"connectors":[{"word":"...","type":"...","type_vi":"...","example":"from dialogue","example_vi":"...","explanation_vi":"..."}]}';
+    }
+
+    try {
+      const content = await callAI(
+        `You are an English teacher. Output ONLY valid JSON matching this format: ${jsonHint}. DO NOT include any emojis (like 💡, 📖, 🇻🇳) inside the JSON values. Ensure every field is filled with meaningful content extracted from the dialogue.`,
+        prompt,
+        { maxTokens: 4000, temperature: 0.7, jsonMode: true }
+      );
+
+      const parsed = parseAIResponse(content);
+      if (parsed) {
+        // Merge into currentData
+        if (parsed.vocabulary) currentData.vocabulary = parsed.vocabulary;
+        if (parsed.tenses) currentData.tenses = parsed.tenses;
+        if (parsed.grammar) currentData.grammar = parsed.grammar;
+        if (parsed.connectors) currentData.connectors = parsed.connectors;
+
+        // Update localStorage
+        if (currentData._dataKey) {
+          try { localStorage.setItem(currentData._dataKey, JSON.stringify(currentData)); } catch(e) {}
+        }
+
+        // Re-render
+        _analysisCache = null; // Clear analysis cache
+        renderSection(activeTab, currentData);
+        showToast(`\u2705 \u0110\u00e3 t\u1ea1o ${tabName}!`);
+      } else {
+        if (container) container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)">\u274c Kh\u00f4ng th\u1ec3 t\u1ea1o. B\u1ea5m l\u1ea1i tab \u0111\u1ec3 th\u1eed l\u1ea1i.</div>';
+      }
+    } catch (err) {
+      if (container) container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text-muted)">\u274c L\u1ed7i: ${err.message}. B\u1ea5m l\u1ea1i tab \u0111\u1ec3 th\u1eed l\u1ea1i.</div>`;
+    } finally {
+      _tabGenerating[tabName] = false;
+    }
   }
 
   function renderSection(tab, data) {
@@ -726,7 +784,11 @@ Make the dialogue feel like a REAL conversation.`;
     container.innerHTML = `
       <div class="dbd-section">
         <div class="tense-cards">
-          ${tenses.map((t, i) => `
+          ${tenses.map((t, i) => {
+      const uEn = (t.usage || '').replace(/^[💡\s]+/, '').trim();
+      const uVi = (t.usage_vi || '').replace(/^[💡\s]+/, '').trim();
+      const isDup = uEn === uVi;
+      return `
             <div class="tense-card">
               <div class="tense-header">
                 <span class="tense-number">${i + 1}</span>
@@ -737,11 +799,12 @@ Make the dialogue feel like a REAL conversation.`;
                 <div class="tense-example">🇬🇧 "${t.example || ''}"</div>
                 ${t.example_vi ? `<div class="tense-example-vi">🇻🇳 "${t.example_vi}"</div>` : ''}
               </div>
-              <div class="tense-usage">💡 ${t.usage || ''}</div>
-              ${t.usage_vi ? `<div class="tense-usage-vi">💡 ${t.usage_vi}</div>` : ''}
-              ${t.explanation_vi ? `<div class="tense-explanation">📖 ${t.explanation_vi}</div>` : ''}
+              <div class="tense-usage">💡 ${uEn}</div>
+              ${(uVi && !isDup) ? `<div class="tense-usage-vi">${uVi}</div>` : ''}
+              ${t.explanation_vi ? `<div class="tense-explanation">📖 ${(t.explanation_vi || '').replace(/^[📖\s]+/, '')}</div>` : ''}
             </div>
-          `).join('')}
+          `;
+    }).join('')}
         </div>
       </div>
     `;
@@ -845,8 +908,18 @@ Make the dialogue feel like a REAL conversation.`;
   }
 
   if ('speechSynthesis' in window) {
-    speechSynthesis.onvoiceschanged = loadVoices;
-    loadVoices();
+    let voicesLoaded = false;
+    speechSynthesis.onvoiceschanged = () => {
+      if (!voicesLoaded) {
+        voicesLoaded = true;
+        loadVoices();
+      }
+    };
+    // Try loading immediately in case voices are already available
+    if (speechSynthesis.getVoices().length > 0) {
+      voicesLoaded = true;
+      // Will be called by init's deferred work
+    }
   }
 
   function changeVoice() {
@@ -1155,7 +1228,7 @@ Make the dialogue feel like a REAL conversation.`;
 
       // 2. Show mic indicator
       const scoreDiv = document.getElementById(`score-${i}`);
-      if (scoreDiv) scoreDiv.innerHTML = '<div class="dialogue-score" style="color:var(--accent-primary)">🎙️ Nói theo...</div>';
+      if (scoreDiv) scoreDiv.innerHTML = '<div class="dialogue-score" style="color:var(--text-primary);font-weight:bold;">🎙️ Nói theo...</div>';
 
       // 3. Listen to user
       const result = await listenToUser(targetText);
@@ -1189,7 +1262,7 @@ Make the dialogue feel like a REAL conversation.`;
       const avgScore = Math.round(scores.reduce((s, r) => s + r.score, 0) / scores.length);
       const goodCount = scores.filter(s => s.score >= 70).length;
       const emoji = avgScore >= 90 ? '🏆' : avgScore >= 70 ? '🌟' : avgScore >= 50 ? '💪' : '📚';
-      const color = avgScore >= 70 ? 'var(--accent-green)' : avgScore >= 50 ? 'var(--accent-orange)' : 'var(--accent-red)';
+      const color = avgScore >= 90 ? '#ffffff' : avgScore >= 70 ? '#e0e0e0' : '#a1a1a6';
 
       const container = document.getElementById('dialogueContainer');
       if (container) {
@@ -1353,37 +1426,21 @@ Make the dialogue feel like a REAL conversation.`;
 
     chatHistory.push({ role: 'user', content: userText });
 
-    const apiKey = getApiKey();
-    if (!apiKey) {
+    if (!getCurrentAIKey()) {
       const typing = document.getElementById('chatTyping');
       if (typing) typing.remove();
-      messages.innerHTML += `<div class="chat-msg bot"><div class="chat-bubble">⚠️ Cần API Key. Bấm ⚙️ ở header.</div></div>`;
+      messages.innerHTML += `<div class="chat-msg bot"><div class="chat-bubble">⚠️ Cần API Key.</div></div>`;
       messages.scrollTop = messages.scrollHeight;
       return;
     }
 
     try {
-      const response = await fetch(MINIMAX_API_URL, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'MiniMax-M2.5',
-          messages: [
-            { role: 'system', content: 'You are a friendly English tutor. Answer in a mix of English and Vietnamese to help the user learn. Be concise.' },
-            ...chatHistory,
-          ],
-          max_tokens: 1000,
-          temperature: 0.7,
-        }),
-      });
-      const data = await response.json();
-      let reply = '⚠️ Không nhận được phản hồi.';
-      if (data.choices && data.choices.length > 0) {
-        reply = data.choices[0].message.content;
-      }
+      const chatContext = chatHistory.map(m => `${m.role}: ${m.content}`).join('\n');
+      const reply = await callAI(
+        'You are a friendly English tutor. Answer in a mix of English and Vietnamese to help the user learn. Be concise.',
+        chatContext,
+        { maxTokens: 1000, temperature: 0.7 }
+      );
 
       const typing = document.getElementById('chatTyping');
       if (typing) typing.remove();
@@ -1405,8 +1462,11 @@ Make the dialogue feel like a REAL conversation.`;
   // ============================================
   function toggleVi(index) {
     const el = document.getElementById(`vi-toggle-${index}`);
-    if (el) {
-      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    const turn = document.getElementById(`turn-${index}`);
+    if (el && turn) {
+      const isShowing = (el.style.display === 'none' || el.style.display === '');
+      el.style.display = isShowing ? 'block' : 'none';
+      turn.classList.toggle('is-active', isShowing);
     }
   }
 
@@ -1415,8 +1475,11 @@ Make the dialogue feel like a REAL conversation.`;
   // ============================================
   function revealEnglish(index) {
     const el = document.getElementById(`en-reveal-${index}`);
-    if (el) {
-      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    const turn = document.getElementById(`turn-${index}`);
+    if (el && turn) {
+      const isShowing = (el.style.display === 'none' || el.style.display === '');
+      el.style.display = isShowing ? 'block' : 'none';
+      turn.classList.toggle('is-active', isShowing);
     }
   }
 

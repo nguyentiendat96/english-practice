@@ -9,8 +9,32 @@
     <meta name="description" content="English DBD - AI-powered English dialogue generator with pronunciation scoring">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://api.minimax.io">
+    <!-- Critical inline CSS for instant first paint -->
+    <style>
+      *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+      :root {
+        --bg-primary: #050505; --bg-card: #161616; --text-primary: #f5f5f7;
+        --text-muted: #6e6e73; --accent-primary: #ffffff; --accent-secondary: #e0e0e0;
+        --border-subtle: rgba(255,255,255,0.08);
+      }
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        background: var(--bg-primary); color: var(--text-primary);
+        min-height: 100vh; -webkit-font-smoothing: antialiased;
+      }
+      .app-container { max-width: 1000px; margin: 0 auto; padding: 0 16px 100px; }
+      .app-header { padding: 32px 0 24px; text-align: center; }
+      .logo { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:8px; }
+      .logo h1 { font-size:32px; font-weight:800; color: var(--text-primary); letter-spacing: -1px; }
+      .welcome-screen { text-align:center; padding:80px 20px; }
+      .welcome-icon { font-size:72px; margin-bottom:20px; }
+    </style>
+    <!-- Non-render-blocking font loading -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"></noscript>
+    <!-- Defer full stylesheet -->
+    <link rel="stylesheet" href="style.css" media="print" onload="this.media='all'">
 </head>
 <body>
     <div class="app-container">
@@ -67,21 +91,24 @@
                 </div>
                 <select id="levelSelect" class="command-select">
                     <option value="a1">A1 — Beginner</option>
+                    <option value="a1-a2">A1 🔥 A2 (Mixed)</option>
                     <option value="a2">A2 — Elementary</option>
-                    <option value="b1" selected>B1 — Intermediate</option>
+                    <option value="a2-b1" selected>A2 🔥 B1 (Mixed)</option>
+                    <option value="b1">B1 — Intermediate</option>
+                    <option value="b1-b2">B1 🔥 B2 (Mixed)</option>
                     <option value="b2">B2 — Upper-Int</option>
                 </select>
                 <select id="turnsSelect" class="command-select command-select-sm">
                     <option value="6">6 câu</option>
                     <option value="8">8 câu</option>
-                    <option value="10" selected>10 câu</option>
+                    <option value="10">10 câu</option>
                     <option value="12">12 câu</option>
-                    <option value="15">15 câu</option>
+                    <option value="15" selected>15 câu</option>
                 </select>
                 <select id="sentenceLengthSelect" class="command-select command-select-sm">
                     <option value="short">Ngắn</option>
-                    <option value="medium" selected>Vừa</option>
-                    <option value="long">Dài</option>
+                    <option value="medium">Vừa</option>
+                    <option value="long" selected>Dài</option>
                 </select>
                 <button class="command-go-btn" id="commandGoBtn" onclick="app.executeCommand()">
                     <span>Generate</span>
@@ -131,7 +158,10 @@
             <div class="loading-screen" id="loadingScreen" style="display:none">
                 <div class="loading-spinner"></div>
                 <div class="loading-text">🤖 AI đang tạo bài học...</div>
-                <div class="loading-sub">10-15 lượt hội thoại + Từ vựng + Ngữ pháp</div>
+                <div class="loading-sub" id="loadingSteps">Đang kết nối...</div>
+                <div class="loading-progress">
+                    <div class="loading-progress-bar" id="loadingProgressBar"></div>
+                </div>
             </div>
 
             <!-- DBD Result -->
@@ -173,6 +203,6 @@
         <span class="toast-message" id="toastMessage"></span>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=19" defer></script>
 </body>
 </html>
