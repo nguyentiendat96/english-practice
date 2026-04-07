@@ -7,8 +7,55 @@
   // --- State ---
   let currentData = null; // current DBD result
   let currentCommand = '';
-  let history = JSON.parse(localStorage.getItem('dbdHistory') || '[]');
+  let historyMeta = []; // lightweight metadata only (no full data)
   let showVietnamese = true;
+
+  // --- Performance: Lazy-load history ---
+  // History metadata (title, level, topic, timestamp, command, dataKey) stored in 'dbdHistoryMeta'
+  // Full lesson data stored per-item in 'dbdData_{timestamp}'
+  function initHistory() {
+    const newMeta = localStorage.getItem('dbdHistoryMeta');
+    if (newMeta) {
+      try { historyMeta = JSON.parse(newMeta); } catch(e) { historyMeta = []; }
+      return;
+    }
+    // Migrate old format: 'dbdHistory' had full data embedded
+    const oldHistory = localStorage.getItem('dbdHistory');
+    if (oldHistory) {
+      try {
+        const oldItems = JSON.parse(oldHistory);
+        historyMeta = oldItems.map(item => {
+          const dataKey = 'dbdData_' + (item.timestamp || Date.now());
+          if (item.data) {
+            try { localStorage.setItem(dataKey, JSON.stringify(item.data)); } catch(e) { /* quota */ }
+          }
+          return {
+            command: item.command,
+            title: item.title || 'Untitled',
+            level: item.level || '',
+            topic: item.topic || '',
+            timestamp: item.timestamp || Date.now(),
+            dataKey: dataKey,
+          };
+        });
+        localStorage.setItem('dbdHistoryMeta', JSON.stringify(historyMeta));
+        localStorage.removeItem('dbdHistory'); // clean up old format
+      } catch(e) { historyMeta = []; }
+    }
+  }
+
+  function saveHistoryMeta() {
+    try { localStorage.setItem('dbdHistoryMeta', JSON.stringify(historyMeta)); } catch(e) { /* quota */ }
+  }
+
+  function loadHistoryData(index) {
+    const item = historyMeta[index];
+    if (!item || !item.dataKey) return null;
+    try {
+      const raw = localStorage.getItem(item.dataKey);
+      return raw ? JSON.parse(raw) : null;
+    } catch(e) { return null; }
+  }
 
   // Speech
   let selectedVoice = null;
@@ -28,6 +75,7 @@
 
   // --- Init ---
   function init() {
+    initHistory();
     loadVoices();
     renderHistory();
     // Load saved theme
@@ -347,17 +395,27 @@ Make the dialogue feel like a REAL conversation.`;
         if (result && result.dialogue_en) {
           currentData = result;
 
-          const historyItem = {
+          const ts = Date.now();
+          const dataKey = 'dbdData_' + ts;
+          const metaItem = {
             command: command,
             title: result.title || 'Untitled',
             level: result.level || '',
             topic: result.topic || '',
-            timestamp: Date.now(),
-            data: result,
+            timestamp: ts,
+            dataKey: dataKey,
           };
-          history.unshift(historyItem);
-          if (history.length > 20) history.pop();
-          localStorage.setItem('dbdHistory', JSON.stringify(history));
+          // Save data separately
+          try { localStorage.setItem(dataKey, JSON.stringify(result)); } catch(e) { /* quota */ }
+          historyMeta.unshift(metaItem);
+          // Keep max 20, clean up old data
+          while (historyMeta.length > 20) {
+            const removed = historyMeta.pop();
+            if (removed && removed.dataKey) {
+              try { localStorage.removeItem(removed.dataKey); } catch(e) {}
+            }
+          }
+          saveHistoryMeta();
 
           loadingScreen.style.display = 'none';
           dbdResult.style.display = 'block';
@@ -471,51 +529,67 @@ Make the dialogue feel like a REAL conversation.`;
   }
 
   // --- 🇬🇧 English Tab: English only, listen & read ---
-  function renderEnglishSection(container, data) {
-    const enLines = data.dialogue_en || [];
-    const viLines = data.dialogue_vi || [];
+  // Pre-build analysis map once per data set to avoid O(n*m) per sentence
+  let _analysisCache = null;
+  let _analysisCacheDataRef = null;
+
+  function buildAnalysisMap(data) {
+    if (_analysisCacheDataRef === data && _analysisCache) return _analysisCache;
+    _analysisCacheDataRef = data;
+
     const tenses = data.tenses || [];
     const grammar = data.grammar || [];
     const connectors = data.connectors || [];
 
-    // Build per-sentence analysis
-    function findAnalysis(sentenceText) {
-      const lower = sentenceText.toLowerCase();
-      const parts = [];
+    // Pre-compile connector regexes
+    const connectorRegexes = connectors.map(c => {
+      const word = (c.word || '').toLowerCase();
+      return {
+        regex: new RegExp('\\b' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i'),
+        html: `<span class="inline-tag connector-tag">🔗 ${c.word} <small>(${c.type_vi || c.type || ''})</small></span>`,
+      };
+    });
 
-      // Match tenses
-      tenses.forEach(t => {
-        if (t.example && lower.includes(t.example.toLowerCase().substring(0, 15))) {
-          parts.push(`<span class="inline-tag tense-tag">⏰ ${t.tense}</span>`);
-        }
-      });
+    // Pre-compute tense match prefixes
+    const tensePrefixes = tenses.filter(t => t.example).map(t => ({
+      prefix: t.example.toLowerCase().substring(0, 15),
+      html: `<span class="inline-tag tense-tag">⏰ ${t.tense}</span>`,
+    }));
 
-      // Match connectors
-      connectors.forEach(c => {
-        const word = (c.word || '').toLowerCase();
-        const regex = new RegExp('\\b' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
-        if (regex.test(sentenceText)) {
-          parts.push(`<span class="inline-tag connector-tag">🔗 ${c.word} <small>(${c.type_vi || c.type || ''})</small></span>`);
-        }
-      });
+    // Pre-compute grammar match prefixes
+    const grammarPrefixes = grammar.filter(g => g.example_en).map(g => ({
+      prefix: g.example_en.toLowerCase().substring(0, 12),
+      html: `<span class="inline-tag grammar-tag">📝 ${g.type}</span>`,
+    }));
 
-      // Match grammar
-      grammar.forEach(g => {
-        if (g.example_en && lower.includes(g.example_en.toLowerCase().substring(0, 12))) {
-          parts.push(`<span class="inline-tag grammar-tag">📝 ${g.type}</span>`);
-        }
-      });
+    _analysisCache = { connectorRegexes, tensePrefixes, grammarPrefixes };
+    return _analysisCache;
+  }
 
-      return parts.join(' ');
+  function findAnalysisFast(sentenceText, analysisMap) {
+    const lower = sentenceText.toLowerCase();
+    const parts = [];
+    for (const t of analysisMap.tensePrefixes) {
+      if (lower.includes(t.prefix)) parts.push(t.html);
     }
+    for (const c of analysisMap.connectorRegexes) {
+      if (c.regex.test(sentenceText)) parts.push(c.html);
+    }
+    for (const g of analysisMap.grammarPrefixes) {
+      if (lower.includes(g.prefix)) parts.push(g.html);
+    }
+    return parts.join(' ');
+  }
 
-    container.innerHTML = `
-      <div class="dbd-section">
-        <div style="padding:8px 16px;margin-bottom:8px;font-size:13px;color:var(--text-muted);background:var(--bg-card);border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">
-          💡 <strong>Bước 1:</strong> Bấm vào câu để xem nghĩa tiếng Việt + phân tích ngữ pháp. Bấm 🔊 để nghe.
-        </div>
-        <div class="dialogue-container" id="dialogueContainer">
-          ${enLines.map((line, i) => {
+  function renderEnglishSection(container, data) {
+    const enLines = data.dialogue_en || [];
+    const viLines = data.dialogue_vi || [];
+    const analysisMap = buildAnalysisMap(data);
+
+    // Build HTML chunks in array, join once
+    const turnChunks = new Array(enLines.length);
+    for (let i = 0; i < enLines.length; i++) {
+      const line = enLines[i];
       const speakerClass = (line.speaker || 'A') === 'A' ? 'speaker-a' : 'speaker-b';
       const enText = line.text || '';
       const speakerName = line.name || line.speaker || 'Speaker';
@@ -523,10 +597,9 @@ Make the dialogue feel like a REAL conversation.`;
       const cleanEn = enText.replace(/\*\*/g, '');
       const displayEn = enText.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
       const viText = viLines[i] ? (viLines[i].text || '').replace(/\*\*/g, '') : '';
-      const analysis = findAnalysis(cleanEn);
+      const analysis = findAnalysisFast(cleanEn, analysisMap);
 
-      return `
-              <div class="dialogue-turn ${speakerClass} clickable-row" id="turn-${i}" data-en="${escapeAttr(cleanEn)}" onclick="app.toggleVi(${i})">
+      turnChunks[i] = `<div class="dialogue-turn ${speakerClass} clickable-row" id="turn-${i}" data-en="${escapeAttr(cleanEn)}" onclick="app.toggleVi(${i})">
                 <div class="dialogue-avatar">${speakerInitial}</div>
                 <div class="dialogue-content">
                   <div class="dialogue-name">${speakerName}</div>
@@ -539,9 +612,16 @@ Make the dialogue feel like a REAL conversation.`;
                 <div class="dialogue-actions" onclick="event.stopPropagation()">
                   <button class="dialogue-btn" onclick="app.speak('${escapeQuotes(cleanEn)}')" title="Nghe">🔊</button>
                 </div>
-              </div>
-            `;
-    }).join('')}
+              </div>`;
+    }
+
+    container.innerHTML = `
+      <div class="dbd-section">
+        <div style="padding:8px 16px;margin-bottom:8px;font-size:13px;color:var(--text-muted);background:var(--bg-card);border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">
+          💡 <strong>Bước 1:</strong> Bấm vào câu để xem nghĩa tiếng Việt + phân tích ngữ pháp. Bấm 🔊 để nghe.
+        </div>
+        <div class="dialogue-container" id="dialogueContainer">
+          ${turnChunks.join('')}
         </div>
       </div>
     `;
@@ -1165,13 +1245,13 @@ Make the dialogue feel like a REAL conversation.`;
     const list = document.getElementById('historyList');
     if (!section || !list) return;
 
-    if (history.length === 0) {
+    if (historyMeta.length === 0) {
       section.style.display = 'none';
       return;
     }
 
     section.style.display = 'block';
-    list.innerHTML = history.map((item, i) => `
+    list.innerHTML = historyMeta.map((item, i) => `
       <div class="history-item" onclick="app.loadHistory(${i})">
         <div class="history-item-left">
           <span class="history-cmd">${item.command}</span>
@@ -1186,29 +1266,48 @@ Make the dialogue feel like a REAL conversation.`;
   }
 
   function loadHistory(index) {
-    const item = history[index];
-    if (!item || !item.data) return;
-    currentData = item.data;
-    currentCommand = item.command;
-    // Set combobox values from command
-    const match = item.command.match(/^\/?(\w+)\s+(\w+)/);
-    if (match) {
-      const ts = document.getElementById('topicSelect');
-      const ls = document.getElementById('levelSelect');
-      if (ts) ts.value = match[1];
-      if (ls) ls.value = match[2];
-    }
+    const item = historyMeta[index];
+    if (!item) return;
 
+    // Show loading briefly for large data
     welcomeScreen.style.display = 'none';
-    loadingScreen.style.display = 'none';
-    dbdResult.style.display = 'block';
-    activeTab = 'english';
-    renderDBDResult(item.data);
+    loadingScreen.style.display = 'block';
+
+    // Lazy-load full data from separate localStorage key
+    requestAnimationFrame(() => {
+      const data = loadHistoryData(index);
+      if (!data) {
+        loadingScreen.style.display = 'none';
+        welcomeScreen.style.display = 'block';
+        showToast('❌ Không tìm thấy dữ liệu bài học');
+        return;
+      }
+
+      currentData = data;
+      currentCommand = item.command;
+      // Set combobox values from command
+      const match = item.command.match(/^\/?(\w+)\s+(\w+)/);
+      if (match) {
+        const ts = document.getElementById('topicSelect');
+        const ls = document.getElementById('levelSelect');
+        if (ts) ts.value = match[1];
+        if (ls) ls.value = match[2];
+      }
+
+      loadingScreen.style.display = 'none';
+      dbdResult.style.display = 'block';
+      activeTab = 'english';
+      renderDBDResult(data);
+    });
   }
 
   function deleteHistory(index) {
-    history.splice(index, 1);
-    localStorage.setItem('dbdHistory', JSON.stringify(history));
+    const removed = historyMeta.splice(index, 1);
+    // Also remove the data from localStorage
+    if (removed[0] && removed[0].dataKey) {
+      try { localStorage.removeItem(removed[0].dataKey); } catch(e) {}
+    }
+    saveHistoryMeta();
     renderHistory();
     showToast('🗑️ Đã xóa');
   }
