@@ -132,7 +132,11 @@
     executeCommand();
   }
 
+  // ============================================
+  // API CONFIG (Embedded for convenience)
+  // ============================================
   const CEREBRAS_API_URL = 'https://api.cerebras.ai/v1/chat/completions';
+  const CEREBRAS_API_KEY = 'csk-5edxpmev6y9nvc2wxkmjx9ynxr5r3xhv4f52yyeneff2v83r';
   const CEREBRAS_MODEL = 'qwen-3-235b-a22b-instruct-2507';
   const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
 
@@ -148,7 +152,7 @@
 
   // --- API Key Helpers ---
   function getElevenLabsKey() {
-    return localStorage.getItem('elevenlabs_api_key') || '';
+    return 'a2c351511388d19b182e482ec391e4b9a41f588bc0d9e20c';
   }
   function setElevenLabsKey(key) {
     localStorage.setItem('elevenlabs_api_key', key.trim());
@@ -160,10 +164,10 @@
     localStorage.setItem('elevenlabs_voice', id);
   }
   function getCurrentAIKey() {
-    return localStorage.getItem('cerebras_api_key') || '';
+    return CEREBRAS_API_KEY;
   }
   function setAIKey(key) {
-    localStorage.setItem('cerebras_api_key', key.trim());
+    // No-op or keep for override
   }
 
   // ============================================
@@ -207,18 +211,16 @@
     if (existing) existing.remove();
 
     const savedT = localStorage.getItem('app_theme') || 'dark';
-    const savedAI = getCurrentAIKey();
-    const savedEL = getElevenLabsKey();
 
     const modal = document.createElement('div');
     modal.id = 'settingsModal';
     modal.className = 'settings-modal-overlay';
     modal.innerHTML = `
       <div class="settings-modal">
-        <h3>⚙️ Cài đặt API & Giao diện</h3>
+        <h3>⚙️ Cài đặt Giao diện</h3>
         
         <div class="settings-group">
-          <label>🎨 Giao diện</label>
+          <label>🎨 Chủ đề (Theme)</label>
           <div style="display:flex;gap:10px;">
             <button class="settings-input theme-btn ${savedT==='dark'?'active':''}" onclick="app.previewTheme('dark')" style="flex:1;background:#111;color:#fff;border-color:${savedT==='dark'?'#fff':'#333'}">🌑 Tối (Carbon)</button>
             <button class="settings-input theme-btn ${savedT==='light'?'active':''}" onclick="app.previewTheme('light')" style="flex:1;background:#fff;color:#000;border-color:${savedT==='light'?'#000':'#ccc'}">☀️ Sáng (Light)</button>
@@ -226,20 +228,10 @@
         </div>
 
         <div class="settings-group">
-          <label>🧠 Cerebras API Key (Cần thiết để tạo bài)</label>
-          <input type="password" id="settingsAIKey" class="settings-input" placeholder="Nhập csk-..." value="${savedAI}">
-          <small style="color:var(--text-muted);display:block;margin-top:4px;">Bạn có thể lấy Key miễn phí tại <a href="https://cloud.cerebras.ai/" target="_blank" style="color:var(--accent-primary)">cloud.cerebras.ai</a></small>
-        </div>
-
-        <div class="settings-group">
-          <label>🎙️ ElevenLabs API Key (Tùy chọn cho giọng đọc hay)</label>
-          <input type="password" id="settingsELKey" class="settings-input" placeholder="Nhập ElevenLabs Key..." value="${savedEL}">
-          <div style="margin-top:8px;">
-            <label style="font-size:12px;margin-bottom:4px;">Chọn giọng đọc:</label>
-            <select id="settingsELVoice" class="settings-input">
-              ${elevenLabsVoices.map(v => `<option value="${v.id}" ${v.id === getElevenLabsVoice() ? 'selected' : ''}>${v.name}</option>`).join('')}
-            </select>
-          </div>
+          <label>🎙️ Giọng đọc mặc định</label>
+          <select id="settingsELVoice" class="settings-input">
+            ${elevenLabsVoices.map(v => `<option value="${v.id}" ${v.id === getElevenLabsVoice() ? 'selected' : ''}>${v.name}</option>`).join('')}
+          </select>
         </div>
 
         <div class="settings-actions">
@@ -253,19 +245,14 @@
   }
 
   function saveSettings() {
-    const aiKey = document.getElementById('settingsAIKey')?.value;
-    const elKey = document.getElementById('settingsELKey')?.value;
     const elVoice = document.getElementById('settingsELVoice')?.value;
-
-    if (aiKey) setAIKey(aiKey);
-    if (elKey) setElevenLabsKey(elKey);
     if (elVoice) setElevenLabsVoice(elVoice);
     
     const activeTheme = document.documentElement.getAttribute('data-theme') || 'dark';
     localStorage.setItem('app_theme', activeTheme);
 
     document.getElementById('settingsModal')?.remove();
-    showToast('✅ Đã lưu cài đặt an toàn!');
+    showToast('✅ Đã lưu cài đặt!');
   }
 
   function previewTheme(theme) {
