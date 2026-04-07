@@ -137,7 +137,7 @@
   // ============================================
   const CEREBRAS_API_URL = 'https://api.cerebras.ai/v1/chat/completions';
   const CEREBRAS_API_KEY = 'csk-5edxpmev6y9nvc2wxkmjx9ynxr5r3xhv4f52yyeneff2v83r';
-  const CEREBRAS_MODEL = 'qwen-3-235b-a22b-instruct-2507';
+  const CEREBRAS_MODEL = 'qwen-3-235b-a22b-instruct-2507'; // User's preferred model
   const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
 
   // ElevenLabs voices
@@ -152,7 +152,7 @@
 
   // --- API Key Helpers ---
   function getElevenLabsKey() {
-    return 'a2c351511388d19b182e482ec391e4b9a41f588bc0d9e20c';
+    return 'sk_a2c351511388d19b182e482ec391e4b9a41f588bc0d9e20c';
   }
   function setElevenLabsKey(key) {
     localStorage.setItem('elevenlabs_api_key', key.trim());
@@ -200,8 +200,13 @@
       body: JSON.stringify(body),
     });
 
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      console.error('[Cerebras] API Error:', response.status, errData);
+      throw new Error(errData.error?.message || `API Error ${response.status}`);
+    }
+
     const data = await response.json();
-    if (data.error) throw new Error(data.error.message || 'Cerebras API error');
     if (data.choices && data.choices.length > 0) return data.choices[0].message.content;
     throw new Error('Không nhận được phản hồi từ AI');
   }
@@ -650,25 +655,21 @@ JSON format:
       const speakerClass = (line.speaker || 'A') === 'A' ? 'speaker-a' : 'speaker-b';
       const enText = line.text || '';
       const speakerName = line.name || line.speaker || 'Speaker';
-      const speakerInitial = speakerName.charAt(0).toUpperCase();
       const cleanEn = enText.replace(/\*\*/g, '');
       const displayEn = enText.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
       const viText = viLines[i] ? (viLines[i].text || '').replace(/\*\*/g, '') : '';
       const analysis = findAnalysisFast(cleanEn, analysisMap);
 
       turnChunks[i] = `<div class="dialogue-turn ${speakerClass} clickable-row" id="turn-${i}" data-en="${escapeAttr(cleanEn)}" onclick="app.toggleVi(${i})">
-                <div class="dialogue-avatar">${speakerInitial}</div>
+                <div class="dialogue-avatar" onclick="app.speak('${escapeQuotes(cleanEn)}'); event.stopPropagation();" title="Nghe">🔊</div>
                 <div class="dialogue-content">
                   <div class="dialogue-name">${speakerName}</div>
                   <div class="dialogue-en">${displayEn}</div>
                   <div class="dialogue-detail" id="vi-toggle-${i}" style="display:none;">
-                    <div class="detail-vi">🇻🇳 ${viText}</div>
+                    <div class="detail-vi sub-text">🇻🇳 ${viText}</div>
                     ${analysis ? `<div class="detail-tags">${analysis}</div>` : ''}
                   </div>
                   </div>
-                </div>
-                <div class="dialogue-actions" onclick="event.stopPropagation()">
-                  <button class="dialogue-btn" onclick="app.speak('${escapeQuotes(cleanEn)}')" title="Nghe">🔊</button>
                 </div>
               </div>`;
     }
@@ -705,11 +706,10 @@ JSON format:
       const viText = (viLine.text || '').replace(/\*\*/g, '');
       const enText = enLine ? (enLine.text || '').replace(/\*\*/g, '') : '';
       const speakerName = viLine.name || viLine.speaker || 'Speaker';
-      const speakerInitial = speakerName.charAt(0).toUpperCase();
 
       return `
               <div class="dialogue-turn ${speakerClass} clickable-row" id="turn-${i}" data-en="${escapeAttr(enText)}" onclick="app.revealEnglish(${i})">
-                <div class="dialogue-avatar">${speakerInitial}</div>
+                <div class="dialogue-avatar" onclick="app.speak('${escapeQuotes(enText)}'); event.stopPropagation();" title="Nghe">🔊</div>
                 <div class="dialogue-content">
                   <div class="dialogue-name">${speakerName}</div>
                   <div class="dialogue-vi" style="display:block;font-style:normal;color:var(--text-primary);font-size:14px;">🇻🇳 ${viText}</div>
@@ -723,12 +723,11 @@ JSON format:
                     </div>
                     <div id="write-result-${i}"></div>
                   </div>
-                  <div class="dialogue-en practice-hidden" id="en-reveal-${i}" style="display:none;margin-top:6px;padding:6px 10px;background:rgba(108,92,231,0.1);border-radius:6px;font-size:13px;color:var(--accent-secondary);">🇬🇧 ${enText}</div>
+                  <div class="dialogue-en sub-text practice-hidden" id="en-reveal-${i}" style="display:none;">🇬🇧 ${enText}</div>
                   <div id="score-${i}"></div>
                 </div>
                 <div class="dialogue-actions" onclick="event.stopPropagation()">
                   <button class="dialogue-btn" id="mic-${i}" onclick="app.recordTurn(${i})" title="Nói tiếng Anh">🎙️</button>
-                  <button class="dialogue-btn" onclick="app.speak('${escapeQuotes(enText)}')" title="Nghe đáp án">🔊</button>
                 </div>
               </div>
             `;
@@ -1541,9 +1540,6 @@ JSON format:
       </div>
     `;
 
-    // Disable input after check
-    input.disabled = true;
-    input.style.opacity = '0.6';
   }
 
   // ============================================

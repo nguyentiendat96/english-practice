@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -65,56 +65,68 @@
 
         <!-- Command Bar -->
         <div class="command-bar" id="commandBar">
-                <button class="command-btn" onclick="app.promptApiKey()" title="Cài đặt API">⚙️</button>
-                <div class="command-divider"></div>
-                <div class="command-badge">🧠 Cerebras AI</div>
-                <select id="topicSelect" class="command-select" onchange="document.getElementById('customTopicWrap').style.display = this.value === 'custom' ? 'flex' : 'none'">
-                    <option value="custom">✏️ Tự nhập nội dung</option>
-                    <option value="it">💻 IT / Công nghệ</option>
-                    <option value="gt" selected>🗣️ Giao tiếp</option>
-                    <option value="daily">🌅 Hàng ngày</option>
-                    <option value="office">🏢 Văn phòng</option>
-                    <option value="airport">✈️ Sân bay</option>
-                    <option value="food">🍜 Ẩm thực</option>
-                    <option value="health">🏥 Sức khỏe</option>
-                    <option value="business">💼 Kinh doanh</option>
-                    <option value="shopping">🛒 Mua sắm</option>
-                    <option value="travel">🌍 Du lịch</option>
-                    <option value="school">🎒 Trường học</option>
-                    <option value="sport">⚽ Thể thao</option>
-                    <option value="movie">🎬 Phim ảnh</option>
-                    <option value="music">🎵 Âm nhạc</option>
-                    <option value="family">👨‍👩‍👧 Gia đình</option>
-                    <option value="interview">🎯 Phỏng vấn</option>
-                </select>
-                <div id="customTopicWrap" class="custom-topic-wrap" style="display:none;">
-                    <input type="text" id="customTopicInput" class="custom-topic-input" placeholder="Nhập nội dung bạn muốn... (VD: Hỏi đường đến bệnh viện)" autocomplete="off">
+            <div class="command-header">
+                <div class="command-badge">🧠 Cerebras LLAMA 3.3 70B</div>
+                <button class="command-btn" onclick="app.promptApiKey()" title="Cài đặt API">⚙️ Settings</button>
+            </div>
+            
+            <div class="command-input-wrap">
+                <div class="command-group main-group">
+                    <select id="topicSelect" class="command-select"
+                            onchange="document.getElementById('customTopicWrap').style.display = this.value === 'custom' ? 'flex' : 'none'">
+                        <option value="custom">✍️ Tự nhập nội dung</option>
+                        <option value="it">💻 IT / Công nghệ</option>
+                        <option value="gt" selected>🗣️ Giao tiếp</option>
+                        <option value="daily">🌅 Hàng ngày</option>
+                        <option value="office">🏢 Văn phòng</option>
+                        <option value="airport">✈️ Sân bay</option>
+                        <option value="food">🍲 Ẩm thực</option>
+                        <option value="health">🍏 Sức khỏe</option>
+                        <option value="business">💼 Kinh doanh</option>
+                        <option value="shopping">🛒 Mua sắm</option>
+                        <option value="travel">🌎 Du lịch</option>
+                        <option value="school">🎒 Trường học</option>
+                        <option value="sport">⚽ Thể thao</option>
+                        <option value="movie">🎬 Phim ảnh</option>
+                        <option value="music">🎵 Âm nhạc</option>
+                        <option value="family">👨‍👩‍👧 Gia đình</option>
+                        <option value="interview">👔 Phỏng vấn</option>
+                    </select>
+
+                    <select id="levelSelect" class="command-select">
+                        <option value="a1">A1 �� Beginner</option>
+                        <option value="a1-a2">A1 🔥 A2 (Bridge)</option>
+                        <option value="a2">A2 📘 Elementary</option>
+                        <option value="a2-b1" selected>A2 🔥 B1 (Mixed)</option>
+                        <option value="b1">B1 📙 Intermediate</option>
+                        <option value="b1-b2">B1 🔥 B2 (Bridge)</option>
+                        <option value="b2">B2 📕 Upper-Inter</option>
+                    </select>
                 </div>
-                <select id="levelSelect" class="command-select">
-                    <option value="a1">A1 — Beginner</option>
-                    <option value="a1-a2">A1 🔥 A2 (Mixed)</option>
-                    <option value="a2">A2 — Elementary</option>
-                    <option value="a2-b1" selected>A2 🔥 B1 (Mixed)</option>
-                    <option value="b1">B1 — Intermediate</option>
-                    <option value="b1-b2">B1 🔥 B2 (Mixed)</option>
-                    <option value="b2">B2 — Upper-Int</option>
-                </select>
-                <select id="turnsSelect" class="command-select command-select-sm">
-                    <option value="6">6 câu</option>
-                    <option value="8">8 câu</option>
-                    <option value="10">10 câu</option>
-                    <option value="12">12 câu</option>
-                    <option value="15" selected>15 câu</option>
-                </select>
-                <select id="sentenceLengthSelect" class="command-select command-select-sm">
-                    <option value="short">Ngắn</option>
-                    <option value="medium">Vừa</option>
-                    <option value="long" selected>Dài</option>
-                </select>
+
+                <div class="command-group extra-group">
+                    <select id="turnsSelect" class="command-select command-select-sm">
+                        <option value="6">6 câu</option>
+                        <option value="8">8 câu</option>
+                        <option value="10">10 câu</option>
+                        <option value="12">12 câu</option>
+                        <option value="15" selected>15 câu</option>
+                    </select>
+                    <select id="sentenceLengthSelect" class="command-select command-select-sm">
+                        <option value="short">Ngắn</option>
+                        <option value="medium">Vừa</option>
+                        <option value="long" selected>Dài</option>
+                    </select>
+                </div>
+
                 <button class="command-go-btn" id="commandGoBtn" onclick="app.executeCommand()">
-                    <span>Generate</span>
-                    <span class="cmd-arrow">→</span>
+                    <span>Generate →</span>
                 </button>
+            </div>
+
+            <div class="custom-topic-wrap" id="customTopicWrap" style="display:none">
+                <input type="text" id="customTopicInput" class="custom-topic-input" 
+                       placeholder="Ví dụ: Luyện phỏng vấn xin việc, đi mua sắm tại New York...">
             </div>
         </div>
 
@@ -188,6 +200,11 @@
                 <br>• Hỏi nghĩa từ vựng
                 <br>• Luyện đặt câu
                 <br>• Nhờ sửa lỗi ngữ pháp
+                <br>• Giải thích ngữ pháp t    <script src="app.js?v=25" defer></script>
+</body>
+</html>��ng
+                <br>• Luyện đặt câu
+                <br>• Nhờ sửa lỗi ngữ pháp
                 <br>• Giải thích ngữ pháp từ bài DBD</div>
             </div>
         </div>
@@ -204,6 +221,6 @@
         <span class="toast-message" id="toastMessage"></span>
     </div>
 
-    <script src="app.js?v=23" defer></script>
+    <script src="app.js?v=22" defer></script>
 </body>
 </html>
