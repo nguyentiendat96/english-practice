@@ -1935,32 +1935,49 @@ button, a, select {
   .dialogue-btn { width: 30px; height: 30px; font-size: 13px; }
 }
 
-/* Mobile */
-@media (max-width: 480px) {
+/* Mobile & Tablets */
+@media (max-width: 768px) {
   .app-container { padding: 0 8px 70px; }
   .logo h1 { font-size: 20px; }
   .logo-icon { font-size: 28px; }
   .subtitle { font-size: 12px; }
 
   /* Command bar: full stack */
-  .command-bar { padding: 10px; }
+  .command-bar { 
+    padding: 12px; 
+  }
   .command-input-wrap {
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .command-group {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
   }
   .command-select {
-    font-size: 13px;
-    padding: 10px 10px;
-    /* Prevent iOS Safari zoom on focus */
-    font-size: 16px;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    flex: 1;
+    font-size: 16px; /* Best for iOS input */
+    padding: 12px;
   }
   .command-select-sm {
-    min-width: 0;
+    width: 100%;
     max-width: none;
+    min-width: 0;
+  }
+  .command-inner {
+    width: 100%;
   }
   .command-go-btn {
-    padding: 12px;
-    font-size: 14px;
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    margin-top: 4px;
   }
 
   /* Welcome */
