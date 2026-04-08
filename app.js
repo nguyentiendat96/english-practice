@@ -539,8 +539,18 @@ JSON format:
       prompt = `Analyze this ${level}-level English dialogue. Extract 4-5 tenses used with examples from the dialogue. Provide 'usage' in English and 'usage_vi' in Vietnamese.\n\nDialogue:\n\n${dialogueText}`;
       jsonHint = '{"tenses":[{"tense":"...","example":"from dialogue","example_vi":"...","usage":"English usage","usage_vi":"Vietnamese usage","structure":"...","explanation_vi":"..."}]}';
     } else if (tabName === 'grammar') {
-      prompt = `Analyze this ${level}-level English dialogue. Extract 6-8 grammar patterns and 5-8 connectors used. Include Vietnamese explanations.\n\nDialogue:\n${dialogueText}`;
-      jsonHint = '{"grammar":[{"type":"...","structure":"...","example_en":"...","example_vi":"...","explanation":"..."}],"connectors":[{"word":"...","type":"...","type_vi":"...","example":"from dialogue","example_vi":"...","explanation_vi":"..."}]}';
+      const toStructuresByLevel = {
+        'A1': 'want to, need to, have to, like to, try to, go to',
+        'A2': 'want to, need to, have to, like to, try to, be going to, would like to',
+        'A1-A2': 'want to, need to, have to, like to, try to, be going to',
+        'A2-B1': 'used to, be going to, would like to, be able to, have to, in order to',
+        'B1': 'used to, be used to, look forward to, be supposed to, be able to, in order to, manage to',
+        'B1-B2': 'be used to, look forward to, get used to, in order to, be supposed to, tend to, be about to',
+        'B2': 'be used to, get used to, look forward to, object to, be accustomed to, resort to, be committed to',
+      };
+      const toHints = toStructuresByLevel[level] || toStructuresByLevel['B1'];
+      prompt = `Analyze this ${level}-level English dialogue. Extract 6-8 grammar patterns and 5-8 connectors used. Also extract 3-5 common grammar structures with "to" that are appropriate for ${level} learners (such as: ${toHints}). Include Vietnamese explanations.\n\nDialogue:\n${dialogueText}`;
+      jsonHint = '{"grammar":[{"type":"...","structure":"...","example_en":"...","example_vi":"...","explanation":"..."}],"connectors":[{"word":"...","type":"...","type_vi":"...","example":"from dialogue","example_vi":"...","explanation_vi":"..."}],"to_structures":[{"structure":"used to + V","meaning_vi":"đã từng...","example_en":"I used to play football.","example_vi":"Tôi đã từng chơi bóng đá.","explanation":"..."}]}';
     }
 
     try {
@@ -557,6 +567,7 @@ JSON format:
         if (parsed.tenses) currentData.tenses = parsed.tenses;
         if (parsed.grammar) currentData.grammar = parsed.grammar;
         if (parsed.connectors) currentData.connectors = parsed.connectors;
+        if (parsed.to_structures) currentData.to_structures = parsed.to_structures;
 
         // Update localStorage
         if (currentData._dataKey) {
@@ -712,14 +723,14 @@ JSON format:
                 <div class="dialogue-avatar" onclick="app.speak('${escapeQuotes(enText)}'); event.stopPropagation();" title="Nghe">🔊</div>
                 <div class="dialogue-content">
                   <div class="dialogue-name">${speakerName}</div>
-                  <div class="dialogue-vi" style="display:block;font-style:normal;color:var(--text-primary);font-size:14px;">🇻🇳 ${viText}</div>
+                  <div class="dialogue-vi" style="display:block;font-style:normal;">${viText}</div>
                   <div class="practice-write-area" id="write-area-${i}" onclick="event.stopPropagation()">
                     <div class="practice-write-row">
                       <input type="text" class="practice-write-input" id="write-input-${i}" 
                              placeholder="Viết lại bằng tiếng Anh..." 
                              autocomplete="off" spellcheck="false"
                              onkeydown="if(event.key==='Enter') app.checkWriting(${i})">
-                      <button class="practice-write-check" onclick="app.checkWriting(${i})" title="Kiểm tra">✅</button>
+                      <button class="practice-write-check" onclick="app.checkWriting(${i})" title="Kiểm tra">→</button>
                     </div>
                     <div id="write-result-${i}"></div>
                   </div>
@@ -743,35 +754,28 @@ JSON format:
 
     container.innerHTML = `
       <div class="dbd-section">
-        <table class="vocab-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Word</th>
-              <th>IPA</th>
-              <th>Nghĩa</th>
-              <th>Ví dụ</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            ${vocab.map((v, i) => `
-              <tr>
-                <td>${i + 1}</td>
-                <td><span class="vocab-word">${v.word || ''}</span></td>
-                <td><span class="vocab-ipa">${v.ipa || ''}</span></td>
-                <td><span class="vocab-meaning">${v.meaning || ''}</span></td>
-                <td>
-                  <div class="vocab-example">${v.example_en || ''}</div>
-                  <div class="vocab-example-vi">${v.example_vi || ''}</div>
-                </td>
-                <td>
-                  <button class="vocab-speak-btn" onclick="app.speak('${escapeQuotes(v.word || '')}')" title="Nghe">🔊</button>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
+        <div class="vocab-cards">
+          ${vocab.map((v, i) => `
+            <div class="vocab-card" id="vocab-${i}">
+              <div class="vocab-card-header">
+                <div class="vocab-card-word">
+                  <span class="vocab-word">${v.word || ''}</span>
+                  <span class="vocab-ipa">${v.ipa || ''}</span>
+                </div>
+                <span class="vocab-meaning">${v.meaning || ''}</span>
+              </div>
+              <div class="vocab-card-example">
+                <div class="vocab-example">🇬🇧 ${v.example_en || ''}</div>
+                <div class="vocab-example-vi">🇻🇳 ${v.example_vi || ''}</div>
+              </div>
+              <div class="vocab-card-actions">
+                <button class="dialogue-avatar" onclick="app.speak('${escapeQuotes(v.word || '')}'); event.stopPropagation();" title="Nghe">🔊</button>
+                <button class="dialogue-btn" id="vocab-mic-${i}" onclick="app.recordVocab(${i}, '${escapeQuotes(v.word || '')}')" title="Đọc & chấm điểm">🎙️</button>
+                <div id="vocab-score-${i}" class="vocab-score-inline"></div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
       </div>
     `;
   }
@@ -858,6 +862,23 @@ JSON format:
                   </div>
                 `;
     }).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        ${(data.to_structures && data.to_structures.length > 0) ? `
+          <div class="connectors-section">
+            <h3 class="connectors-title">📌 Common Structures with "TO"</h3>
+            <div class="grammar-cards">
+              ${data.to_structures.map(t => `
+                <div class="grammar-card to-structure-card">
+                  <div class="grammar-type">${t.structure || ''}</div>
+                  <div class="grammar-explanation" style="margin-top:4px;">${t.meaning_vi || ''}</div>
+                  <div class="grammar-example">🇬🇧 ${t.example_en || ''}</div>
+                  <div class="grammar-example-vi">🇻🇳 ${t.example_vi || ''}</div>
+                  ${t.explanation ? `<div class="grammar-explanation" style="margin-top:6px;font-size:12px;">📖 ${t.explanation}</div>` : ''}
+                </div>
+              `).join('')}
             </div>
           </div>
         ` : ''}
@@ -1483,6 +1504,67 @@ JSON format:
   }
 
   // ============================================
+  // RECORD VOCAB - Pronunciation scoring
+  // ============================================
+  function recordVocab(index, expectedWord) {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      showToast('❌ Trình duyệt không hỗ trợ nhận diện giọng nói');
+      return;
+    }
+
+    const micBtn = document.getElementById(`vocab-mic-${index}`);
+    const scoreDiv = document.getElementById(`vocab-score-${index}`);
+    if (!micBtn || !scoreDiv) return;
+
+    // Toggle recording state
+    if (micBtn.classList.contains('recording')) {
+      micBtn.classList.remove('recording');
+      return;
+    }
+
+    micBtn.classList.add('recording');
+    micBtn.textContent = '⏹️';
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 3;
+
+    recognition.onresult = (event) => {
+      micBtn.classList.remove('recording');
+      micBtn.textContent = '🎙️';
+
+      const spoken = event.results[0][0].transcript.toLowerCase().trim();
+      const expected = expectedWord.toLowerCase().trim();
+
+      // Calculate similarity
+      const score = calculateScore(spoken, expected);
+      const isGood = score >= 70;
+
+      scoreDiv.innerHTML = `<span style="color:${isGood ? 'var(--accent-green)' : 'var(--accent-red)'}">${score}%</span> <span style="color:var(--text-muted);font-size:11px;">"${spoken}"</span>`;
+      scoreDiv.style.animation = 'fadeIn 0.3s ease';
+    };
+
+    recognition.onerror = (event) => {
+      micBtn.classList.remove('recording');
+      micBtn.textContent = '🎙️';
+      if (event.error === 'no-speech') {
+        showToast('🎙️ Không nghe thấy giọng nói, thử lại!');
+      } else {
+        showToast('❌ Lỗi nhận diện: ' + event.error);
+      }
+    };
+
+    recognition.onend = () => {
+      micBtn.classList.remove('recording');
+      micBtn.textContent = '🎙️';
+    };
+
+    recognition.start();
+  }
+
+  // ============================================
   // CHECK WRITING
   // ============================================
   function checkWriting(index) {
@@ -1699,6 +1781,7 @@ JSON format:
     speak,
     playAll,
     recordTurn,
+    recordVocab,
     startPractice,
     revealEnglish,
     checkWriting,

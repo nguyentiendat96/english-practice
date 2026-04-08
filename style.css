@@ -840,9 +840,10 @@ button, a, select {
 }
 
 .dbd-tab.active {
-  background: var(--text-primary);
-  color: var(--bg-primary);
+  background: rgba(255,255,255,0.12);
+  color: var(--text-primary);
   font-weight: 700;
+  border: 1px solid rgba(255,255,255,0.2);
 }
 
 /* ============================================
@@ -998,14 +999,14 @@ button, a, select {
 }
 
 .sub-text {
-  padding: 8px 12px;
-  background: rgba(108, 92, 231, 0.1); /* Lavender background */
+  padding: 10px 14px;
+  background: rgba(108, 92, 231, 0.08);
   border-radius: 8px;
   font-size: 13px;
-  color: var(--accent-secondary);
-  border: 1px solid rgba(108, 92, 231, 0.15);
-  margin-top: 6px;
-  line-height: 1.5;
+  color: var(--text-secondary);
+  border: 1px solid rgba(108, 92, 231, 0.12);
+  margin-top: 8px;
+  line-height: 1.6;
   display: block;
 }
 
@@ -1189,11 +1190,11 @@ button, a, select {
 .practice-write-check {
   width: 36px;
   height: 36px;
-  border: none;
+  border: 1px solid var(--border-medium);
   border-radius: var(--radius-sm);
-  background: var(--text-primary);
-  color: var(--bg-primary);
-  font-size: 16px;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
   flex-shrink: 0;
@@ -1203,6 +1204,9 @@ button, a, select {
 }
 
 .practice-write-check:hover {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border-color: var(--text-primary);
   transform: scale(1.05);
 }
 
@@ -1275,54 +1279,35 @@ button, a, select {
 }
 
 /* ============================================
-   VOCABULARY SECTION
+   VOCABULARY CARDS
    ============================================ */
-.vocab-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0 8px;
+.vocab-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.vocab-table th {
-  padding: 12px 20px;
-  text-align: left;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  background: transparent;
-  border-bottom: none;
-}
-
-.vocab-table td {
-  padding: 16px 20px;
-  font-size: 14px;
+.vocab-card {
   background: var(--bg-card);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-top: 1px solid var(--border-subtle);
-  border-bottom: 1px solid var(--border-subtle);
-  vertical-align: middle;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.vocab-table td:first-child {
-  border-left: 1px solid var(--border-subtle);
-  border-top-left-radius: var(--radius-md);
-  border-bottom-left-radius: var(--radius-md);
+.vocab-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.vocab-table td:last-child {
-  border-right: 1px solid var(--border-subtle);
-  border-top-right-radius: var(--radius-md);
-  border-bottom-right-radius: var(--radius-md);
-}
-
-.vocab-table tr:hover td {
-  background: var(--bg-card-hover);
-  border-color: var(--border-medium);
-  transform: scale(1.005);
+.vocab-card-word {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .vocab-word {
@@ -1342,8 +1327,16 @@ button, a, select {
 }
 
 .vocab-meaning {
-  color: var(--accent-secondary);
+  color: var(--text-secondary);
   font-weight: 500;
+  font-size: 13px;
+}
+
+.vocab-card-example {
+  padding: 8px 12px;
+  background: rgba(108, 92, 231, 0.08);
+  border-radius: 8px;
+  border: 1px solid rgba(108, 92, 231, 0.12);
 }
 
 .vocab-example {
@@ -1359,27 +1352,16 @@ button, a, select {
   margin-top: 4px;
 }
 
-.vocab-speak-btn {
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 50%;
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-  cursor: pointer;
+.vocab-card-actions {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  transition: all 0.3s;
-  box-shadow: var(--shadow-sm);
+  gap: 8px;
 }
 
-.vocab-speak-btn:hover {
-  background: var(--accent-primary);
-  color: var(--bg-primary);
-  transform: scale(1.1);
-  box-shadow: 0 0 15px rgba(255,255,255,0.2);
+.vocab-score-inline {
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 4px;
 }
 
 /* ============================================
