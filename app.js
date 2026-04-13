@@ -470,7 +470,7 @@ JSON format:
       if (!getCurrentAIKey()) return;
     }
 
-    const match = command.trim().match(/^\\/?(\\w+)\\s+(a1|a2|b1|b2|a1-a2|a2-b1|b1-b2)$/i);
+    const match = command.trim().match(/^\/?(\w+)\s+(a1|a2|b1|b2|a1-a2|a2-b1|b1-b2)$/i);
     if (!match) { showToast('❌ Sai cú pháp'); return; }
 
     const type = match[1].toLowerCase();
