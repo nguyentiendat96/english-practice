@@ -619,7 +619,7 @@ JSON format:
 
   function renderNewsResult(data) {
     if (!data) return;
-    newsShowVi = true;
+    newsShowVi = false;
 
     const paras = data.paragraphs_en || [];
     const parasVi = data.paragraphs_vi || [];
@@ -666,20 +666,20 @@ JSON format:
           <div class="news-para-number">${i + 1}</div>
           <div class="news-para-content">
             <p class="news-en">${highlightedText}</p>
-            <p class="news-vi">${parasVi[i] || ''}</p>
+            <p class="news-vi" style="display:none">${parasVi[i] || ''}</p>
           </div>
           <button class="news-listen-btn" onclick="event.stopPropagation(); app.speakNewsParagraph(${i})">🔊</button>
         </div>`;
     }
     html += '</div>';
 
-    // Attach click listeners after render via setTimeout
+    // Attach click listeners: click row = toggle Vietnamese sub
     setTimeout(() => {
       document.querySelectorAll('.news-paragraph').forEach(el => {
         el.addEventListener('click', (e) => {
           if (e.target.closest('.news-listen-btn')) return;
-          const idx = parseInt(el.dataset.idx);
-          speakNewsParagraph(idx);
+          const vi = el.querySelector('.news-vi');
+          if (vi) vi.style.display = vi.style.display === 'none' ? '' : 'none';
         });
       });
     }, 100);
