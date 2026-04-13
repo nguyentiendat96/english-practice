@@ -103,23 +103,45 @@
   // ============================================
   // COMMAND HANDLING
   // ============================================
-  let currentMode = 'dialogue'; // 'dialogue' or 'news'
+  let currentMode = 'dialogue'; // 'dialogue', 'news', 'tenses', 'linkwords'
+
+  const modeLabels = {
+    dialogue: 'Generate →',
+    news: '📰 Generate News →',
+    tenses: '⏰ Generate Tenses →',
+    linkwords: '🔗 Generate Link Words →',
+  };
 
   function switchMode(mode) {
     currentMode = mode;
-    // Update UI tabs
+    // Update all tab active states
+    ['modeDialogue', 'modeNews', 'modeTenses', 'modeLinkwords'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('active', id === 'mode' + mode.charAt(0).toUpperCase() + mode.slice(1));
+    });
+    // Fix casing for ids
     document.getElementById('modeDialogue')?.classList.toggle('active', mode === 'dialogue');
     document.getElementById('modeNews')?.classList.toggle('active', mode === 'news');
-    // Show/hide dialogue-specific options (turns, sentence length)
+    document.getElementById('modeTenses')?.classList.toggle('active', mode === 'tenses');
+    document.getElementById('modeLinkwords')?.classList.toggle('active', mode === 'linkwords');
+
+    // Show/hide dialogue-specific options
     const extraGroup = document.querySelector('.extra-group');
     if (extraGroup) {
-      extraGroup.style.display = mode === 'news' ? 'none' : 'flex';
+      extraGroup.style.display = mode === 'dialogue' ? 'flex' : 'none';
     }
-    // Update generate button text
+    // Show/hide topic select for tenses/linkwords (only need level)
+    const mainGroup = document.querySelector('.main-group');
+    const customWrap = document.getElementById('customTopicWrap');
+    if (mainGroup) {
+      const topicSelect = document.getElementById('topicSelect');
+      if (topicSelect) topicSelect.style.display = (mode === 'tenses' || mode === 'linkwords') ? 'none' : '';
+    }
+    if (customWrap && (mode === 'tenses' || mode === 'linkwords')) customWrap.style.display = 'none';
+
+    // Update button text
     const goBtn = document.getElementById('commandGoBtn');
-    if (goBtn) {
-      goBtn.querySelector('span').textContent = mode === 'news' ? '📰 Generate News →' : 'Generate →';
-    }
+    if (goBtn) goBtn.querySelector('span').textContent = modeLabels[mode] || 'Generate →';
   }
 
   function executeCommand() {
@@ -128,15 +150,15 @@
     const turnsSelect = document.getElementById('turnsSelect');
     const sentenceLengthSelect = document.getElementById('sentenceLengthSelect');
     const customInput = document.getElementById('customTopicInput');
-    if (!topicSelect || !levelSelect) return;
+    if (!levelSelect) return;
 
-    const type = topicSelect.value;
+    const type = topicSelect ? topicSelect.value : 'gt';
     const level = levelSelect.value;
     const turns = turnsSelect ? parseInt(turnsSelect.value) : 6;
     const sentenceLength = sentenceLengthSelect ? sentenceLengthSelect.value : 'long';
 
     let customTopic = '';
-    if (type === 'custom') {
+    if (type === 'custom' && currentMode === 'dialogue') {
       customTopic = (customInput ? customInput.value : '').trim();
       if (!customTopic) {
         showToast('❌ Vui lòng nhập nội dung bạn muốn!');
@@ -150,6 +172,10 @@
 
     if (currentMode === 'news') {
       generateNews(cmd, customTopic);
+    } else if (currentMode === 'tenses') {
+      generateTensesLesson(level);
+    } else if (currentMode === 'linkwords') {
+      generateLinkwordsLesson(level);
     } else {
       generateDBD(cmd, turns, sentenceLength, customTopic);
     }
@@ -747,6 +773,410 @@ JSON format:
     document.querySelectorAll('.news-paragraph').forEach(p => p.classList.remove('playing'));
     playAllRunning = false;
     showToast('✅ Đã đọc xong!');
+  }
+  // ============================================
+  // GENERATE TENSES LESSON
+  // ============================================
+  async function generateTensesLesson(level) {
+    if (!getCurrentAIKey()) {
+      if (!promptApiKey()) { showToast('❌ Cần API Key'); return; }
+      if (!getCurrentAIKey()) return;
+    }
+
+    const levelDesc = levelDescriptions[level.toUpperCase()] || levelDescriptions['B1'];
+
+    welcomeScreen.style.display = 'none';
+    dbdResult.style.display = 'none';
+    loadingScreen.style.display = 'block';
+
+    const loadingSteps = document.getElementById('loadingSteps');
+    const progressBar = document.getElementById('loadingProgressBar');
+    const steps = [
+      { text: '🔗 Đang kết nối AI...', pct: 10 },
+      { text: '⏰ Đang tạo bài tenses...', pct: 40 },
+      { text: '📝 Đang tạo bài tập...', pct: 70 },
+      { text: '✨ Sắp xong...', pct: 95 },
+    ];
+    let stepIdx = 0;
+    const stepTimer = setInterval(() => {
+      if (stepIdx < steps.length) {
+        if (loadingSteps) loadingSteps.textContent = steps[stepIdx].text;
+        if (progressBar) progressBar.style.width = steps[stepIdx].pct + '%';
+        stepIdx++;
+      }
+    }, 2500);
+
+    const goBtn = document.getElementById('commandGoBtn');
+    if (goBtn) { goBtn.disabled = true; goBtn.querySelector('span').textContent = 'Generating...'; }
+
+    const systemPrompt = `You are "English DBD Tenses", an expert English grammar teacher. Output ONLY valid JSON.
+
+Level: ${level.toUpperCase()} - ${levelDesc}
+
+Create a comprehensive TENSES LESSON for level ${level.toUpperCase()}.
+
+Pick 2-3 tenses appropriate for this level and for each tense provide:
+- Name (e.g. "Present Simple", "Past Perfect")
+- Structure/formula
+- When to use (3-4 rules with Vietnamese explanation)
+- 4 example sentences with Vietnamese translation, bold the verb with **verb**
+- Signal words
+
+Also create 8-10 fill-in-the-blank exercises with answers.
+
+JSON format:
+{
+  "title": "Tenses Lesson - Level",
+  "level": "${level.toUpperCase()}",
+  "tenses": [
+    {
+      "name": "Present Simple",
+      "formula": "S + V(s/es) + O",
+      "rules": [{"en": "For habits and routines", "vi": "Thói quen hàng ngày"}],
+      "examples": [{"en": "She **goes** to school every day.", "vi": "Cô ấy đi học mỗi ngày."}],
+      "signals": ["always", "every day", "usually"]
+    }
+  ],
+  "exercises": [
+    {"sentence": "She ___ (go) to school every day.", "answer": "goes", "tense": "Present Simple"}
+  ]
+}`;
+
+    try {
+      const content = await callAI(systemPrompt, `Create tenses lesson for ${level.toUpperCase()} level.`, { maxTokens: 4000, temperature: 0.7, jsonMode: true });
+      let result = parseAIResponse(content);
+
+      if (result && result.tenses) {
+        currentData = result;
+        currentData._type = 'tenses';
+        const ts = Date.now();
+        const dataKey = 'dbdData_' + ts;
+        try { localStorage.setItem(dataKey, JSON.stringify(result)); } catch(e) {}
+        currentData._dataKey = dataKey;
+        historyMeta.unshift({ command: '/tenses ' + level, title: '⏰ ' + (result.title || 'Tenses'), level: result.level || '', topic: 'Tenses', timestamp: ts, dataKey, type: 'tenses' });
+        while (historyMeta.length > 20) { const rm = historyMeta.pop(); if (rm && rm.dataKey) try { localStorage.removeItem(rm.dataKey); } catch(e) {} }
+        saveHistoryMeta();
+
+        loadingScreen.style.display = 'none';
+        dbdResult.style.display = 'block';
+        renderTensesResult(result);
+        showToast('✅ Đã tạo bài tenses!');
+      } else {
+        loadingScreen.style.display = 'none'; welcomeScreen.style.display = 'block';
+        showToast('❌ AI response error. Try again.');
+      }
+    } catch (err) {
+      loadingScreen.style.display = 'none'; welcomeScreen.style.display = 'block';
+      showToast('❌ Lỗi: ' + err.message);
+    } finally {
+      clearInterval(stepTimer);
+      if (progressBar) progressBar.style.width = '0%';
+      if (loadingSteps) loadingSteps.textContent = 'Đang kết nối...';
+      if (goBtn) { goBtn.disabled = false; goBtn.querySelector('span').textContent = modeLabels[currentMode] || 'Generate →'; }
+    }
+  }
+
+  function renderTensesResult(data) {
+    if (!data) return;
+    const tenses = data.tenses || [];
+    const exercises = data.exercises || [];
+
+    dbdResult.innerHTML = `
+      <div class="dbd-header">
+        <div class="dbd-header-left">
+          <h2>⏰ ${data.title || 'Tenses Lesson'}</h2>
+          <div class="dbd-header-meta">
+            <span class="dbd-meta-tag level">${data.level || ''}</span>
+            <span class="dbd-meta-tag">${tenses.length} tenses</span>
+            <span class="dbd-meta-tag">${exercises.length} exercises</span>
+          </div>
+        </div>
+        <div class="dbd-header-actions">
+          <button class="dbd-action-btn" onclick="app.backToHome()">🏠 Về trang chủ</button>
+        </div>
+      </div>
+
+      <div class="dbd-tabs">
+        <button class="dbd-tab active" onclick="app.switchLessonTab('tenses','learn')">📖 Học</button>
+        <button class="dbd-tab" onclick="app.switchLessonTab('tenses','exercise')">✏️ Bài tập</button>
+      </div>
+
+      <div id="lessonContent">
+        ${renderTensesLearnTab(tenses)}
+      </div>
+    `;
+  }
+
+  function renderTensesLearnTab(tenses) {
+    return tenses.map(t => `
+      <div class="lesson-card">
+        <div class="lesson-card-header">
+          <h3>${t.name}</h3>
+          <code class="lesson-formula">${t.formula || ''}</code>
+        </div>
+        <div class="lesson-rules">
+          ${(t.rules || []).map(r => `<div class="lesson-rule"><span class="rule-en">📌 ${r.en}</span><span class="rule-vi">${r.vi}</span></div>`).join('')}
+        </div>
+        <div class="lesson-signals">
+          <strong>Signal words:</strong> ${(t.signals || []).map(s => `<span class="signal-tag">${s}</span>`).join('')}
+        </div>
+        <div class="lesson-examples">
+          ${(t.examples || []).map(ex => `
+            <div class="lesson-example" onclick="app.speak('${ex.en.replace(/\*\*/g, '').replace(/'/g, "\\\\'")}')" style="cursor:pointer">
+              <div class="example-en">${ex.en.replace(/\*\*(.*?)\*\*/g, '<strong class="news-keyword">$1</strong>')}</div>
+              <div class="example-vi">${ex.vi}</div>
+              <span class="news-listen-btn" style="position:absolute;right:12px;top:50%;transform:translateY(-50%)">🔊</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderTensesExerciseTab(exercises) {
+    return `<div class="lesson-exercises">
+      ${exercises.map((ex, i) => `
+        <div class="exercise-item">
+          <div class="exercise-q">
+            <span class="news-quiz-num">${i + 1}</span>
+            <span>${ex.sentence}</span>
+          </div>
+          <div class="exercise-input-row">
+            <input type="text" class="exercise-input" id="exInput${i}" placeholder="Type answer..." onkeyup="if(event.key==='Enter')app.checkExercise(${i},'${ex.answer.replace(/'/g, "\\\\'")}')">
+            <button class="exercise-check-btn" onclick="app.checkExercise(${i},'${ex.answer.replace(/'/g, "\\\\'")}')">Check</button>
+          </div>
+          <div class="exercise-feedback" id="exFeedback${i}"></div>
+          <div class="exercise-meta">${ex.tense || ''}</div>
+        </div>
+      `).join('')}
+    </div>`;
+  }
+
+  function checkExercise(index, correctAnswer) {
+    const input = document.getElementById('exInput' + index);
+    const feedback = document.getElementById('exFeedback' + index);
+    if (!input || !feedback) return;
+
+    const userAnswer = input.value.trim().toLowerCase();
+    const correct = correctAnswer.trim().toLowerCase();
+
+    if (userAnswer === correct) {
+      feedback.innerHTML = '✅ Correct!';
+      feedback.className = 'exercise-feedback correct';
+      input.style.borderColor = '#4caf50';
+    } else {
+      feedback.innerHTML = '❌ Wrong. Answer: <strong>' + correctAnswer + '</strong>';
+      feedback.className = 'exercise-feedback wrong';
+      input.style.borderColor = '#f44336';
+    }
+  }
+
+  // ============================================
+  // GENERATE LINK WORDS LESSON
+  // ============================================
+  async function generateLinkwordsLesson(level) {
+    if (!getCurrentAIKey()) {
+      if (!promptApiKey()) { showToast('❌ Cần API Key'); return; }
+      if (!getCurrentAIKey()) return;
+    }
+
+    const levelDesc = levelDescriptions[level.toUpperCase()] || levelDescriptions['B1'];
+
+    welcomeScreen.style.display = 'none';
+    dbdResult.style.display = 'none';
+    loadingScreen.style.display = 'block';
+
+    const loadingSteps = document.getElementById('loadingSteps');
+    const progressBar = document.getElementById('loadingProgressBar');
+    const steps = [
+      { text: '🔗 Đang kết nối AI...', pct: 10 },
+      { text: '🔗 Đang tạo bài link words...', pct: 40 },
+      { text: '📝 Đang tạo bài tập...', pct: 70 },
+      { text: '✨ Sắp xong...', pct: 95 },
+    ];
+    let stepIdx = 0;
+    const stepTimer = setInterval(() => {
+      if (stepIdx < steps.length) {
+        if (loadingSteps) loadingSteps.textContent = steps[stepIdx].text;
+        if (progressBar) progressBar.style.width = steps[stepIdx].pct + '%';
+        stepIdx++;
+      }
+    }, 2500);
+
+    const goBtn = document.getElementById('commandGoBtn');
+    if (goBtn) { goBtn.disabled = true; goBtn.querySelector('span').textContent = 'Generating...'; }
+
+    const systemPrompt = `You are "English DBD Link Words", an expert English teacher. Output ONLY valid JSON.
+
+Level: ${level.toUpperCase()} - ${levelDesc}
+
+Create a LINKING WORDS / CONNECTORS lesson for level ${level.toUpperCase()}.
+
+Organize connectors into 4-6 categories:
+- Addition (and, also, furthermore...)
+- Contrast (but, however, nevertheless...)
+- Cause/Effect (because, therefore, as a result...)
+- Time/Sequence (first, then, finally...)
+- Example (for example, such as...)
+- Condition (if, unless, provided that...)
+
+For each category provide:
+- Category name (English + Vietnamese)
+- 4-6 connectors with meaning and example sentence
+- Level-appropriate complexity
+
+Also create 8-10 fill-in exercises.
+
+JSON format:
+{
+  "title": "Linking Words - Level",
+  "level": "${level.toUpperCase()}",
+  "categories": [
+    {
+      "name": "Addition",
+      "name_vi": "Bổ sung",
+      "connectors": [
+        {"word": "furthermore", "vi": "hơn nữa", "example": "She is smart. **Furthermore**, she works very hard.", "example_vi": "Cô ấy thông minh. Hơn nữa, cô ấy rất chăm chỉ."}
+      ]
+    }
+  ],
+  "exercises": [
+    {"sentence": "She is tired, ___ she keeps working.", "options": ["however", "because", "and"], "answer": "however"}
+  ]
+}`;
+
+    try {
+      const content = await callAI(systemPrompt, `Create linking words lesson for ${level.toUpperCase()} level.`, { maxTokens: 4000, temperature: 0.7, jsonMode: true });
+      let result = parseAIResponse(content);
+
+      if (result && result.categories) {
+        currentData = result;
+        currentData._type = 'linkwords';
+        const ts = Date.now();
+        const dataKey = 'dbdData_' + ts;
+        try { localStorage.setItem(dataKey, JSON.stringify(result)); } catch(e) {}
+        currentData._dataKey = dataKey;
+        historyMeta.unshift({ command: '/linkwords ' + level, title: '🔗 ' + (result.title || 'Link Words'), level: result.level || '', topic: 'Link Words', timestamp: ts, dataKey, type: 'linkwords' });
+        while (historyMeta.length > 20) { const rm = historyMeta.pop(); if (rm && rm.dataKey) try { localStorage.removeItem(rm.dataKey); } catch(e) {} }
+        saveHistoryMeta();
+
+        loadingScreen.style.display = 'none';
+        dbdResult.style.display = 'block';
+        renderLinkwordsResult(result);
+        showToast('✅ Đã tạo bài link words!');
+      } else {
+        loadingScreen.style.display = 'none'; welcomeScreen.style.display = 'block';
+        showToast('❌ AI response error. Try again.');
+      }
+    } catch (err) {
+      loadingScreen.style.display = 'none'; welcomeScreen.style.display = 'block';
+      showToast('❌ Lỗi: ' + err.message);
+    } finally {
+      clearInterval(stepTimer);
+      if (progressBar) progressBar.style.width = '0%';
+      if (loadingSteps) loadingSteps.textContent = 'Đang kết nối...';
+      if (goBtn) { goBtn.disabled = false; goBtn.querySelector('span').textContent = modeLabels[currentMode] || 'Generate →'; }
+    }
+  }
+
+  function renderLinkwordsResult(data) {
+    if (!data) return;
+    const categories = data.categories || [];
+    const exercises = data.exercises || [];
+
+    dbdResult.innerHTML = `
+      <div class="dbd-header">
+        <div class="dbd-header-left">
+          <h2>🔗 ${data.title || 'Link Words'}</h2>
+          <div class="dbd-header-meta">
+            <span class="dbd-meta-tag level">${data.level || ''}</span>
+            <span class="dbd-meta-tag">${categories.length} categories</span>
+            <span class="dbd-meta-tag">${exercises.length} exercises</span>
+          </div>
+        </div>
+        <div class="dbd-header-actions">
+          <button class="dbd-action-btn" onclick="app.backToHome()">🏠 Về trang chủ</button>
+        </div>
+      </div>
+
+      <div class="dbd-tabs">
+        <button class="dbd-tab active" onclick="app.switchLessonTab('linkwords','learn')">📖 Học</button>
+        <button class="dbd-tab" onclick="app.switchLessonTab('linkwords','exercise')">✏️ Bài tập</button>
+      </div>
+
+      <div id="lessonContent">
+        ${renderLinkwordsLearnTab(categories)}
+      </div>
+    `;
+  }
+
+  function renderLinkwordsLearnTab(categories) {
+    return categories.map(cat => `
+      <div class="lesson-card">
+        <div class="lesson-card-header">
+          <h3>${cat.name}</h3>
+          <span class="lesson-formula">${cat.name_vi || ''}</span>
+        </div>
+        <div class="connector-grid">
+          ${(cat.connectors || []).map(c => `
+            <div class="connector-item" onclick="app.speak('${c.word.replace(/'/g, "\\\\'")}')" style="cursor:pointer">
+              <div class="connector-word">${c.word} <span class="connector-vi">${c.vi || ''}</span></div>
+              <div class="connector-example">${(c.example || '').replace(/\*\*(.*?)\*\*/g, '<strong class="news-keyword">$1</strong>')}</div>
+              <div class="connector-example-vi">${c.example_vi || ''}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderLinkwordsExerciseTab(exercises) {
+    return `<div class="lesson-exercises">
+      ${exercises.map((ex, i) => `
+        <div class="exercise-item">
+          <div class="exercise-q">
+            <span class="news-quiz-num">${i + 1}</span>
+            <span>${ex.sentence}</span>
+          </div>
+          <div class="exercise-options">
+            ${(ex.options || []).map(opt => `
+              <button class="exercise-option-btn" onclick="app.checkLinkExercise(${i},'${opt.replace(/'/g, "\\\\'")}','${ex.answer.replace(/'/g, "\\\\'")}')">${opt}</button>
+            `).join('')}
+          </div>
+          <div class="exercise-feedback" id="lkFeedback${i}"></div>
+        </div>
+      `).join('')}
+    </div>`;
+  }
+
+  function checkLinkExercise(index, chosen, correct) {
+    const feedback = document.getElementById('lkFeedback' + index);
+    if (!feedback) return;
+    if (chosen.toLowerCase() === correct.toLowerCase()) {
+      feedback.innerHTML = '✅ Correct!';
+      feedback.className = 'exercise-feedback correct';
+    } else {
+      feedback.innerHTML = '❌ Wrong. Answer: <strong>' + correct + '</strong>';
+      feedback.className = 'exercise-feedback wrong';
+    }
+    // Disable all buttons in this exercise
+    const item = feedback.closest('.exercise-item');
+    if (item) item.querySelectorAll('.exercise-option-btn').forEach(btn => { btn.disabled = true; btn.style.opacity = '0.5'; });
+  }
+
+  // Shared tab switcher for tenses/linkwords
+  function switchLessonTab(type, tab) {
+    const tabs = document.querySelectorAll('.dbd-tab');
+    tabs.forEach((t, i) => t.classList.toggle('active', (tab === 'learn' && i === 0) || (tab === 'exercise' && i === 1)));
+
+    const container = document.getElementById('lessonContent');
+    if (!container || !currentData) return;
+
+    if (type === 'tenses') {
+      container.innerHTML = tab === 'learn' ? renderTensesLearnTab(currentData.tenses || []) : renderTensesExerciseTab(currentData.exercises || []);
+    } else {
+      container.innerHTML = tab === 'learn' ? renderLinkwordsLearnTab(currentData.categories || []) : renderLinkwordsExerciseTab(currentData.exercises || []);
+    }
   }
 
   // --- Parse & repair AI JSON ---
@@ -1858,7 +2288,11 @@ JSON format:
 
       loadingScreen.style.display = 'none';
       dbdResult.style.display = 'block';
-      if (item.type === 'news' || data.paragraphs_en) {
+      if (item.type === 'tenses' || data._type === 'tenses' || data.tenses) {
+        renderTensesResult(data);
+      } else if (item.type === 'linkwords' || data._type === 'linkwords' || data.categories) {
+        renderLinkwordsResult(data);
+      } else if (item.type === 'news' || data.paragraphs_en) {
         renderNewsResult(data);
       } else {
         activeTab = 'english';
@@ -2276,6 +2710,9 @@ JSON format:
     toggleNewsVi,
     newsReadAll,
     speakNewsParagraph,
+    switchLessonTab,
+    checkExercise,
+    checkLinkExercise,
   };
 
   // --- Start ---
