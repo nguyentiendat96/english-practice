@@ -1093,13 +1093,67 @@ JSON format:
     }
   }
 
+  // Anti-duplicate: track what's currently being spoken
+  let isSpeaking = false;
+  let lastSpokenText = '';
+  let lastSpokenTime = 0;
+  const DUPLICATE_THRESHOLD_MS = 2000; // ignore same text within 2s
+
+  function stopAllSpeech() {
+    // Stop browser TTS
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    // Stop ElevenLabs audio
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+      currentAudio = null;
+    }
+    // Stop playAll
+    playAllRunning = false;
+    // Reset state
+    isSpeaking = false;
+    document.querySelectorAll('.dialogue-turn').forEach(t => t.classList.remove('playing'));
+    // Update stop button
+    updateStopButton(false);
+  }
+
+  function updateStopButton(speaking) {
+    const btn = document.getElementById('ttsStopBtn');
+    if (!btn) return;
+    if (speaking) {
+      btn.style.display = 'inline-flex';
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+      btn.style.display = 'none';
+    }
+  }
+
+  function isDuplicate(text) {
+    const now = Date.now();
+    if (text === lastSpokenText && (now - lastSpokenTime) < DUPLICATE_THRESHOLD_MS) {
+      return true;
+    }
+    lastSpokenText = text;
+    lastSpokenTime = now;
+    return false;
+  }
+
   function speak(text) {
-    // Use selected TTS engine
+    if (!text || isDuplicate(text)) return;
+    // Stop any ongoing speech first
+    stopAllSpeech();
+    isSpeaking = true;
+    updateStopButton(true);
+
     if (ttsEngine === 'elevenlabs' && getElevenLabsKey()) {
-      if (currentAudio) { currentAudio.pause(); currentAudio = null; }
       elevenLabsSpeak(text).then(url => {
         if (url) {
           currentAudio = new Audio(url);
+          currentAudio.onended = () => { isSpeaking = false; updateStopButton(false); };
+          currentAudio.onerror = () => { isSpeaking = false; updateStopButton(false); browserSpeak(text); };
           currentAudio.play();
         } else {
           browserSpeak(text);
@@ -1111,26 +1165,32 @@ JSON format:
   }
 
   function browserSpeak(text) {
-    if (!('speechSynthesis' in window)) return;
+    if (!('speechSynthesis' in window)) { isSpeaking = false; updateStopButton(false); return; }
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'en-US';
     utterance.rate = speechRate;
     utterance.pitch = 1;
     if (selectedVoice) utterance.voice = selectedVoice;
+    utterance.onend = () => { isSpeaking = false; updateStopButton(false); };
+    utterance.onerror = () => { isSpeaking = false; updateStopButton(false); };
     window.speechSynthesis.speak(utterance);
   }
 
   function speakAndWait(text) {
-    // Use selected TTS engine
+    if (!text) return Promise.resolve();
+    // Stop any ongoing speech first
+    stopAllSpeech();
+    isSpeaking = true;
+    updateStopButton(true);
+
     if (ttsEngine === 'elevenlabs' && getElevenLabsKey()) {
       return new Promise(async resolve => {
-        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
         const url = await elevenLabsSpeak(text);
         if (url) {
           currentAudio = new Audio(url);
-          currentAudio.onended = () => setTimeout(resolve, 400);
-          currentAudio.onerror = () => { browserSpeakAndWait(text).then(resolve); };
+          currentAudio.onended = () => { isSpeaking = false; updateStopButton(false); setTimeout(resolve, 400); };
+          currentAudio.onerror = () => { isSpeaking = false; updateStopButton(false); browserSpeakAndWait(text).then(resolve); };
           currentAudio.play();
         } else {
           browserSpeakAndWait(text).then(resolve);
@@ -1143,15 +1203,15 @@ JSON format:
 
   function browserSpeakAndWait(text) {
     return new Promise(resolve => {
-      if (!('speechSynthesis' in window)) { resolve(); return; }
+      if (!('speechSynthesis' in window)) { isSpeaking = false; updateStopButton(false); resolve(); return; }
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'en-US';
       utterance.rate = speechRate;
       utterance.pitch = 1;
       if (selectedVoice) utterance.voice = selectedVoice;
-      utterance.onend = () => setTimeout(resolve, 400);
-      utterance.onerror = () => resolve();
+      utterance.onend = () => { isSpeaking = false; updateStopButton(false); setTimeout(resolve, 400); };
+      utterance.onerror = () => { isSpeaking = false; updateStopButton(false); resolve(); };
       window.speechSynthesis.speak(utterance);
     });
   }
@@ -1163,9 +1223,7 @@ JSON format:
 
   async function playAll() {
     if (playAllRunning) {
-      playAllRunning = false;
-      window.speechSynthesis.cancel();
-      document.querySelectorAll('.dialogue-turn').forEach(t => t.classList.remove('playing'));
+      stopAllSpeech();
       showToast('⏹️ Đã dừng phát');
       return;
     }
@@ -1887,6 +1945,7 @@ JSON format:
     saveSettings,
     previewTheme,
     changeTTSEngine,
+    stopAllSpeech,
   };
 
   // --- Start ---

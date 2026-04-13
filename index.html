@@ -48,6 +48,7 @@
             </div>
             <div class="voice-controls">
                 <span class="tts-status" id="ttsStatus" title="Trạng thái giọng đọc">🔄 Đang kết nối...</span>
+                <button class="tts-stop-btn" id="ttsStopBtn" onclick="app.stopAllSpeech()" title="Dừng đọc" style="display:none">⏹</button>
                 <select id="ttsEngineSelect" class="voice-select" onchange="app.changeTTSEngine(this.value)" title="Chọn giọng đọc">
                     <option value="browser" selected>🆓 Browser (Free)</option>
                     <option value="elevenlabs">🎙️ ElevenLabs (API)</option>

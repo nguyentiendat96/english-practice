@@ -262,6 +262,38 @@ button, a, select {
   border-color: rgba(255, 69, 58, 0.25);
 }
 
+/* TTS Stop Button */
+.tts-stop-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid rgba(255, 69, 58, 0.4);
+  border-radius: 50%;
+  background: rgba(255, 69, 58, 0.15);
+  color: #ff453a;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tts-stop-btn:hover {
+  background: rgba(255, 69, 58, 0.3);
+  transform: scale(1.1);
+}
+
+.tts-stop-btn.active {
+  display: inline-flex;
+  animation: stop-pulse 1s ease-in-out infinite;
+}
+
+@keyframes stop-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 69, 58, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(255, 69, 58, 0); }
+}
+
 /* ============================================
    COMMAND BAR
    ============================================ */
