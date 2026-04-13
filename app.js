@@ -619,7 +619,7 @@ JSON format:
 
   function renderNewsResult(data) {
     if (!data) return;
-    newsShowVi = false;
+    newsShowVi = true;
 
     const paras = data.paragraphs_en || [];
     const parasVi = data.paragraphs_vi || [];
@@ -666,7 +666,7 @@ JSON format:
           <div class="news-para-number">${i + 1}</div>
           <div class="news-para-content">
             <p class="news-en">${highlightedText}</p>
-            <p class="news-vi" style="display:none">${parasVi[i] || ''}</p>
+            <p class="news-vi">${parasVi[i] || ''}</p>
           </div>
           <button class="news-listen-btn" onclick="event.stopPropagation(); app.speakNewsParagraph(${i})">🔊</button>
         </div>`;
