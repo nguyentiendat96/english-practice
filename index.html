@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -9,7 +9,6 @@
     <meta name="description" content="English DBD - AI-powered English dialogue generator with pronunciation scoring">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://api.minimax.io">
     <!-- Critical inline CSS for instant first paint -->
     <style>
       *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -49,6 +48,10 @@
             </div>
             <div class="voice-controls">
                 <label class="voice-label">🔊</label>
+                <select id="ttsEngineSelect" class="voice-select" onchange="app.changeTTSEngine(this.value)" title="Chọn giọng đọc">
+                    <option value="browser" selected>🆓 Browser (Free)</option>
+                    <option value="elevenlabs">🎙️ ElevenLabs (API)</option>
+                </select>
                 <select id="voiceSelect" class="voice-select" onchange="app.changeVoice()"></select>
                 <label class="voice-label">⚡</label>
                 <select id="voiceSpeed" class="voice-select" onchange="app.changeSpeed(this.value)">
@@ -94,7 +97,7 @@
                     </select>
 
                     <select id="levelSelect" class="command-select">
-                        <option value="a1">A1 �� Beginner</option>
+                        <option value="a1">A1 📗 Beginner</option>
                         <option value="a1-a2">A1 🔥 A2 (Bridge)</option>
                         <option value="a2">A2 📘 Elementary</option>
                         <option value="a2-b1" selected>A2 🔥 B1 (Mixed)</option>
@@ -200,11 +203,6 @@
                 <br>• Hỏi nghĩa từ vựng
                 <br>• Luyện đặt câu
                 <br>• Nhờ sửa lỗi ngữ pháp
-                <br>• Giải thích ngữ pháp t    <script src="app.js?v=25" defer></script>
-</body>
-</html>��ng
-                <br>• Luyện đặt câu
-                <br>• Nhờ sửa lỗi ngữ pháp
                 <br>• Giải thích ngữ pháp từ bài DBD</div>
             </div>
         </div>
@@ -221,6 +219,6 @@
         <span class="toast-message" id="toastMessage"></span>
     </div>
 
-    <script src="app.js?v=22" defer></script>
+    <script src="app.js?v=26" defer></script>
 </body>
 </html>

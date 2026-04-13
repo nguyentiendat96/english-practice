@@ -60,6 +60,7 @@
   // Speech
   let selectedVoice = null;
   let speechRate = parseFloat(localStorage.getItem('speechRate') || '0.85');
+  let ttsEngine = localStorage.getItem('ttsEngine') || 'browser'; // 'browser' or 'elevenlabs'
   let recognizing = false;
 
   // Practice
@@ -78,6 +79,12 @@
     // Fast: read theme immediately (tiny localStorage read)
     const savedTheme = localStorage.getItem('app_theme') || '';
     if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+
+    // Restore saved TTS engine
+    const savedEngine = localStorage.getItem('ttsEngine') || 'browser';
+    ttsEngine = savedEngine;
+    const engineSelect = document.getElementById('ttsEngineSelect');
+    if (engineSelect) engineSelect.value = savedEngine;
 
     // Defer heavy work to after first paint
     const deferWork = window.requestIdleCallback || ((cb) => setTimeout(cb, 50));
@@ -902,25 +909,46 @@ JSON format:
   function loadVoices() {
     const select = document.getElementById('voiceSelect');
     if (!select) return;
+
+    // If ElevenLabs engine is selected, show ElevenLabs voices
+    if (ttsEngine === 'elevenlabs') {
+      select.innerHTML = elevenLabsVoices.map(v =>
+        `<option value="${v.id}" ${v.id === getElevenLabsVoice() ? 'selected' : ''}>${v.name}</option>`
+      ).join('');
+      const speedSlider = document.getElementById('voiceSpeed');
+      if (speedSlider) speedSlider.value = speechRate;
+      return;
+    }
+
+    // Browser voices
     const voices = speechSynthesis.getVoices();
     const englishVoices = voices.filter(v => v.lang.startsWith('en'));
     const savedVoiceName = localStorage.getItem('selectedVoice');
 
     select.innerHTML = '';
-    englishVoices.forEach((voice, i) => {
+    
+    // Prioritize high-quality voices (Natural/Premium voices first)
+    const sorted = [...englishVoices].sort((a, b) => {
+      const aQuality = (a.name.includes('Natural') || a.name.includes('Premium') || a.name.includes('Enhanced')) ? 0 : 1;
+      const bQuality = (b.name.includes('Natural') || b.name.includes('Premium') || b.name.includes('Enhanced')) ? 0 : 1;
+      return aQuality - bQuality;
+    });
+
+    sorted.forEach((voice, i) => {
       const opt = document.createElement('option');
       opt.value = i;
-      const label = voice.name.replace('Microsoft ', '').replace(' Online (Natural)', '').replace(' - English', '');
+      const label = voice.name.replace('Microsoft ', '').replace(' Online (Natural)', ' ⭐').replace(' - English', '');
       opt.textContent = `${label} (${voice.lang})`;
       opt.dataset.voiceName = voice.name;
+      opt.dataset.origIdx = englishVoices.indexOf(voice);
       if (savedVoiceName && voice.name === savedVoiceName) {
         opt.selected = true;
         selectedVoice = voice;
       }
       select.appendChild(opt);
     });
-    if (!selectedVoice && englishVoices.length > 0) {
-      selectedVoice = englishVoices[0];
+    if (!selectedVoice && sorted.length > 0) {
+      selectedVoice = sorted[0];
     }
 
     const speedSlider = document.getElementById('voiceSpeed');
@@ -945,10 +973,25 @@ JSON format:
   function changeVoice() {
     const select = document.getElementById('voiceSelect');
     if (!select) return;
+
+    if (ttsEngine === 'elevenlabs') {
+      // ElevenLabs voice selected
+      setElevenLabsVoice(select.value);
+      speak('Hello!');
+      return;
+    }
+
+    // Browser voice
     const voices = speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
+    // Sort same way as loadVoices
+    const sorted = [...voices].sort((a, b) => {
+      const aQ = (a.name.includes('Natural') || a.name.includes('Premium') || a.name.includes('Enhanced')) ? 0 : 1;
+      const bQ = (b.name.includes('Natural') || b.name.includes('Premium') || b.name.includes('Enhanced')) ? 0 : 1;
+      return aQ - bQ;
+    });
     const idx = parseInt(select.value);
-    if (voices[idx]) {
-      selectedVoice = voices[idx];
+    if (sorted[idx]) {
+      selectedVoice = sorted[idx];
       localStorage.setItem('selectedVoice', selectedVoice.name);
       speak('Hello!');
     }
@@ -957,6 +1000,26 @@ JSON format:
   function changeSpeed(val) {
     speechRate = parseFloat(val);
     localStorage.setItem('speechRate', speechRate);
+  }
+
+  function changeTTSEngine(engine) {
+    ttsEngine = engine;
+    localStorage.setItem('ttsEngine', engine);
+    // Update voice list based on engine
+    const voiceSelect = document.getElementById('voiceSelect');
+    if (engine === 'elevenlabs') {
+      // Show ElevenLabs voices
+      if (voiceSelect) {
+        voiceSelect.innerHTML = elevenLabsVoices.map(v =>
+          `<option value="${v.id}" ${v.id === getElevenLabsVoice() ? 'selected' : ''}>${v.name}</option>`
+        ).join('');
+      }
+      showToast('🎙️ ElevenLabs — Giọng AI cao cấp (cần API)');
+    } else {
+      // Show browser voices
+      loadVoices();
+      showToast('🆓 Browser Voice — Miễn phí, không cần API');
+    }
   }
 
   // --- ElevenLabs TTS ---
@@ -1004,8 +1067,8 @@ JSON format:
   }
 
   function speak(text) {
-    // Try ElevenLabs first
-    if (getElevenLabsKey()) {
+    // Use selected TTS engine
+    if (ttsEngine === 'elevenlabs' && getElevenLabsKey()) {
       if (currentAudio) { currentAudio.pause(); currentAudio = null; }
       elevenLabsSpeak(text).then(url => {
         if (url) {
@@ -1032,8 +1095,8 @@ JSON format:
   }
 
   function speakAndWait(text) {
-    // Try ElevenLabs first
-    if (getElevenLabsKey()) {
+    // Use selected TTS engine
+    if (ttsEngine === 'elevenlabs' && getElevenLabsKey()) {
       return new Promise(async resolve => {
         if (currentAudio) { currentAudio.pause(); currentAudio = null; }
         const url = await elevenLabsSpeak(text);
@@ -1796,6 +1859,7 @@ JSON format:
     promptApiKey,
     saveSettings,
     previewTheme,
+    changeTTSEngine,
   };
 
   // --- Start ---
