@@ -73,6 +73,11 @@
                 <div class="command-badge">🧠 Cerebras LLAMA 3.3 70B</div>
                 <button class="command-btn" onclick="app.promptApiKey()" title="Cài đặt API">⚙️ Settings</button>
             </div>
+
+            <div class="mode-tabs">
+                <button class="mode-tab active" id="modeDialogue" onclick="app.switchMode('dialogue')">🗣️ Hội thoại</button>
+                <button class="mode-tab" id="modeNews" onclick="app.switchMode('news')">📰 Đọc báo</button>
+            </div>
             
             <div class="command-input-wrap">
                 <div class="command-group main-group">

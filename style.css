@@ -316,8 +316,42 @@ button, a, select {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   padding: 0 4px;
+}
+
+/* Mode Tabs (Dialogue / News) */
+.mode-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 3px;
+  background: var(--bg-input);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+}
+
+.mode-tab {
+  flex: 1;
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.mode-tab:hover {
+  color: var(--text-secondary);
+}
+
+.mode-tab.active {
+  background: var(--accent-primary);
+  color: var(--bg-primary);
+  box-shadow: 0 2px 8px rgba(255,255,255,0.15);
 }
 
 .command-badge {
@@ -2291,4 +2325,216 @@ select.settings-input {
 }
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   NEWS ARTICLE STYLES
+   ============================================ */
+.news-article-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.news-paragraph {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+}
+
+.news-paragraph:hover {
+  background: var(--bg-input);
+}
+
+.news-paragraph.playing {
+  background: rgba(255,255,255,0.06);
+  border-left: 3px solid var(--accent-primary);
+}
+
+.news-para-number {
+  min-width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-input);
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.news-para-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.news-en {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.news-vi {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-subtle);
+  font-style: italic;
+}
+
+.news-keyword {
+  background: rgba(255,255,255,0.08);
+  color: var(--accent-primary);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: help;
+}
+
+.news-listen-btn {
+  background: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  margin-top: 2px;
+}
+
+.news-listen-btn:hover {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  transform: scale(1.1);
+}
+
+/* News Vocabulary */
+.news-vocab-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  padding: 16px;
+}
+
+.news-vocab-card {
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.news-vocab-card:hover {
+  border-color: var(--accent-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+
+.news-vocab-word {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.news-vocab-word strong {
+  font-size: 16px;
+  color: var(--accent-primary);
+}
+
+.news-vocab-ipa {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: monospace;
+}
+
+.news-vocab-meaning {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.news-vocab-example {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* News Quiz */
+.news-quiz-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.news-quiz-item {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.news-quiz-q {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.news-quiz-q:hover {
+  background: var(--bg-input);
+}
+
+.news-quiz-num {
+  min-width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-primary);
+  color: var(--bg-primary);
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.news-quiz-reveal {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.news-quiz-a {
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.03);
+  border-top: 1px solid var(--border-subtle);
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
 }

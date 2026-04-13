@@ -103,6 +103,25 @@
   // ============================================
   // COMMAND HANDLING
   // ============================================
+  let currentMode = 'dialogue'; // 'dialogue' or 'news'
+
+  function switchMode(mode) {
+    currentMode = mode;
+    // Update UI tabs
+    document.getElementById('modeDialogue')?.classList.toggle('active', mode === 'dialogue');
+    document.getElementById('modeNews')?.classList.toggle('active', mode === 'news');
+    // Show/hide dialogue-specific options (turns, sentence length)
+    const extraGroup = document.querySelector('.extra-group');
+    if (extraGroup) {
+      extraGroup.style.display = mode === 'news' ? 'none' : 'flex';
+    }
+    // Update generate button text
+    const goBtn = document.getElementById('commandGoBtn');
+    if (goBtn) {
+      goBtn.querySelector('span').textContent = mode === 'news' ? '📰 Generate News →' : 'Generate →';
+    }
+  }
+
   function executeCommand() {
     const topicSelect = document.getElementById('topicSelect');
     const levelSelect = document.getElementById('levelSelect');
@@ -113,7 +132,7 @@
 
     const type = topicSelect.value;
     const level = levelSelect.value;
-    const turns = turnsSelect ? parseInt(turnsSelect.value) : 15;
+    const turns = turnsSelect ? parseInt(turnsSelect.value) : 6;
     const sentenceLength = sentenceLengthSelect ? sentenceLengthSelect.value : 'long';
 
     let customTopic = '';
@@ -128,7 +147,12 @@
 
     const cmd = `/${type} ${level}`;
     currentCommand = cmd;
-    generateDBD(cmd, turns, sentenceLength, customTopic);
+
+    if (currentMode === 'news') {
+      generateNews(cmd, customTopic);
+    } else {
+      generateDBD(cmd, turns, sentenceLength, customTopic);
+    }
   }
 
   function quickCommand(type, level) {
@@ -433,8 +457,296 @@ JSON format:
       clearInterval(stepTimer);
       if (progressBar) progressBar.style.width = '0%';
       if (loadingSteps) loadingSteps.textContent = 'Đang kết nối...';
-      if (goBtn) { goBtn.disabled = false; goBtn.querySelector('span').textContent = 'Generate'; }
+      if (goBtn) { goBtn.disabled = false; goBtn.querySelector('span').textContent = currentMode === 'news' ? '📰 Generate News →' : 'Generate →'; }
     }
+  }
+
+  // ============================================
+  // GENERATE NEWS ARTICLE
+  // ============================================
+  async function generateNews(command, customTopic = '') {
+    if (!getCurrentAIKey()) {
+      if (!promptApiKey()) { showToast('❌ Cần API Key'); return; }
+      if (!getCurrentAIKey()) return;
+    }
+
+    const match = command.trim().match(/^\\/?(\\w+)\\s+(a1|a2|b1|b2|a1-a2|a2-b1|b1-b2)$/i);
+    if (!match) { showToast('❌ Sai cú pháp'); return; }
+
+    const type = match[1].toLowerCase();
+    const level = match[2].toUpperCase();
+    const topic = (type === 'custom' && customTopic) ? customTopic : (topicMap[type] || `News about ${type}`);
+    const levelDesc = levelDescriptions[level] || levelDescriptions['B1'];
+
+    // Show loading
+    welcomeScreen.style.display = 'none';
+    dbdResult.style.display = 'none';
+    loadingScreen.style.display = 'block';
+
+    const loadingSteps = document.getElementById('loadingSteps');
+    const progressBar = document.getElementById('loadingProgressBar');
+    const steps = [
+      { text: '🔗 Đang kết nối AI...', pct: 10 },
+      { text: '📰 Đang viết bài báo...', pct: 30 },
+      { text: '🔤 Đang tạo từ vựng...', pct: 60 },
+      { text: '❓ Đang tạo câu hỏi...', pct: 80 },
+      { text: '✨ Sắp xong...', pct: 95 },
+    ];
+    let stepIdx = 0;
+    const stepTimer = setInterval(() => {
+      if (stepIdx < steps.length) {
+        if (loadingSteps) loadingSteps.textContent = steps[stepIdx].text;
+        if (progressBar) progressBar.style.width = steps[stepIdx].pct + '%';
+        stepIdx++;
+      }
+    }, 2500);
+
+    const goBtn = document.getElementById('commandGoBtn');
+    if (goBtn) { goBtn.disabled = true; goBtn.querySelector('span').textContent = 'Generating...'; }
+
+    const systemPrompt = `You are "English DBD News", an expert English teacher who creates news articles for language learning. Output ONLY valid JSON.
+
+Topic: ${topic}
+Level: ${level} - ${levelDesc}
+
+Write a NEWS ARTICLE (250-400 words) about "${topic}". The article should:
+- Have a catchy headline
+- Be written at ${level} level
+- Bold all IMPORTANT vocabulary words with **word** format
+- Be divided into 4-6 short paragraphs
+- Be realistic and informative like a real news article
+
+Also provide:
+- Vietnamese translation for each paragraph
+- 8-12 key vocabulary words with IPA, meaning, and example
+- 3-5 comprehension questions with answers
+
+JSON format:
+{
+  "headline": "News Headline",
+  "topic": "${topic}",
+  "level": "${level}",
+  "paragraphs_en": ["paragraph 1 with **bold vocab**", "paragraph 2..."],
+  "paragraphs_vi": ["Vietnamese translation 1", "Vietnamese translation 2..."],
+  "vocabulary": [{"word": "word", "ipa": "/pronunciation/", "vi": "Vietnamese meaning", "example": "Example sentence"}],
+  "questions": [{"q": "Question?", "a": "Answer"}]
+}`;
+
+    try {
+      const content = await callAI(
+        systemPrompt,
+        `Write a news article about: ${topic}. Level: ${level}`,
+        { maxTokens: 4000, temperature: 0.7, jsonMode: true }
+      );
+
+      let result = parseAIResponse(content);
+
+      if (result && result.paragraphs_en) {
+        currentData = result;
+        currentData._type = 'news';
+
+        const ts = Date.now();
+        const dataKey = 'dbdData_' + ts;
+        const metaItem = {
+          command: command,
+          title: '📰 ' + (result.headline || 'News'),
+          level: result.level || '',
+          topic: result.topic || '',
+          timestamp: ts,
+          dataKey: dataKey,
+          type: 'news',
+        };
+        try { localStorage.setItem(dataKey, JSON.stringify(result)); } catch(e) {}
+        currentData._dataKey = dataKey;
+        historyMeta.unshift(metaItem);
+        while (historyMeta.length > 20) {
+          const removed = historyMeta.pop();
+          if (removed && removed.dataKey) { try { localStorage.removeItem(removed.dataKey); } catch(e) {} }
+        }
+        saveHistoryMeta();
+
+        loadingScreen.style.display = 'none';
+        dbdResult.style.display = 'block';
+        renderNewsResult(result);
+        showToast('✅ Đã tạo bài báo thành công!');
+      } else {
+        loadingScreen.style.display = 'none';
+        welcomeScreen.style.display = 'block';
+        showToast('❌ AI response format error. Try again.');
+      }
+    } catch (err) {
+      loadingScreen.style.display = 'none';
+      welcomeScreen.style.display = 'block';
+      showToast('❌ Lỗi kết nối: ' + err.message);
+    } finally {
+      clearInterval(stepTimer);
+      if (progressBar) progressBar.style.width = '0%';
+      if (loadingSteps) loadingSteps.textContent = 'Đang kết nối...';
+      if (goBtn) { goBtn.disabled = false; goBtn.querySelector('span').textContent = '📰 Generate News →'; }
+    }
+  }
+
+  // ============================================
+  // RENDER NEWS RESULT
+  // ============================================
+  let newsShowVi = false;
+
+  function renderNewsResult(data) {
+    if (!data) return;
+    newsShowVi = false;
+
+    const paras = data.paragraphs_en || [];
+    const parasVi = data.paragraphs_vi || [];
+    const vocab = data.vocabulary || [];
+    const questions = data.questions || [];
+
+    dbdResult.innerHTML = `
+      <div class="dbd-header">
+        <div class="dbd-header-left">
+          <h2>📰 ${data.headline || 'News Article'}</h2>
+          <div class="dbd-header-meta">
+            <span class="dbd-meta-tag level">${data.level || ''}</span>
+            <span class="dbd-meta-tag">${data.topic || ''}</span>
+            <span class="dbd-meta-tag">${paras.length} paragraphs</span>
+          </div>
+        </div>
+        <div class="dbd-header-actions">
+          <button class="dbd-action-btn" onclick="app.newsReadAll()">▶️ Nghe hết</button>
+          <button class="dbd-action-btn" onclick="app.toggleNewsVi()">🇻🇳 Tiếng Việt</button>
+          <button class="dbd-action-btn" onclick="app.backToHome()">🏠 Về trang chủ</button>
+        </div>
+      </div>
+
+      <div class="dbd-tabs">
+        <button class="dbd-tab active" onclick="app.switchNewsTab('article')">📰 Bài báo</button>
+        <button class="dbd-tab" onclick="app.switchNewsTab('vocab')">📚 Từ vựng</button>
+        <button class="dbd-tab" onclick="app.switchNewsTab('quiz')">❓ Câu hỏi</button>
+      </div>
+
+      <div id="newsContent">
+        ${renderNewsArticleTab(paras, parasVi)}
+      </div>
+    `;
+  }
+
+  function renderNewsArticleTab(paras, parasVi) {
+    let html = '<div class="news-article-section">';
+    for (let i = 0; i < paras.length; i++) {
+      const cleanText = paras[i].replace(/\*\*/g, '');
+      const highlightedText = paras[i].replace(/\*\*(.*?)\*\*/g, '<span class="news-keyword">$1</span>');
+      const safeText = cleanText.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      html += `
+        <div class="news-paragraph" data-idx="${i}">
+          <div class="news-para-number">${i + 1}</div>
+          <div class="news-para-content">
+            <p class="news-en">${highlightedText}</p>
+            <p class="news-vi" style="display:none">${parasVi[i] || ''}</p>
+          </div>
+          <button class="news-listen-btn" onclick="event.stopPropagation(); app.speakNewsParagraph(${i})">🔊</button>
+        </div>`;
+    }
+    html += '</div>';
+
+    // Attach click listeners after render via setTimeout
+    setTimeout(() => {
+      document.querySelectorAll('.news-paragraph').forEach(el => {
+        el.addEventListener('click', (e) => {
+          if (e.target.closest('.news-listen-btn')) return;
+          const idx = parseInt(el.dataset.idx);
+          speakNewsParagraph(idx);
+        });
+      });
+    }, 100);
+
+    return html;
+  }
+
+  function speakNewsParagraph(idx) {
+    if (!currentData || !currentData.paragraphs_en) return;
+    const text = (currentData.paragraphs_en[idx] || '').replace(/\*\*/g, '');
+    if (text) speak(text);
+  }
+
+  function switchNewsTab(tab) {
+    const tabs = document.querySelectorAll('.dbd-tab');
+    tabs.forEach((t, i) => {
+      t.classList.toggle('active', 
+        (tab === 'article' && i === 0) || (tab === 'vocab' && i === 1) || (tab === 'quiz' && i === 2));
+    });
+
+    const container = document.getElementById('newsContent');
+    if (!container || !currentData) return;
+
+    if (tab === 'article') {
+      container.innerHTML = renderNewsArticleTab(currentData.paragraphs_en || [], currentData.paragraphs_vi || []);
+      if (newsShowVi) document.querySelectorAll('.news-vi').forEach(el => el.style.display = 'block');
+    } else if (tab === 'vocab') {
+      const vocab = currentData.vocabulary || [];
+      container.innerHTML = `<div class="news-vocab-section">
+        ${vocab.map(v => `
+          <div class="news-vocab-card" onclick="app.speak('${v.word.replace(/'/g, "\\\\'")}')">
+            <div class="news-vocab-word">
+              <strong>${v.word}</strong>
+              <span class="news-vocab-ipa">${v.ipa || ''}</span>
+            </div>
+            <div class="news-vocab-meaning">${v.vi || ''}</div>
+            <div class="news-vocab-example">${v.example || ''}</div>
+          </div>
+        `).join('')}
+      </div>`;
+    } else if (tab === 'quiz') {
+      const questions = currentData.questions || [];
+      container.innerHTML = `<div class="news-quiz-section">
+        ${questions.map((q, i) => `
+          <div class="news-quiz-item">
+            <div class="news-quiz-q" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+              <span class="news-quiz-num">${i + 1}</span>
+              ${q.q}
+              <span class="news-quiz-reveal">👆 Bấm xem đáp án</span>
+            </div>
+            <div class="news-quiz-a" style="display:none">✅ ${q.a}</div>
+          </div>
+        `).join('')}
+      </div>`;
+    }
+  }
+
+  function toggleNewsVi() {
+    newsShowVi = !newsShowVi;
+    document.querySelectorAll('.news-vi').forEach(el => {
+      el.style.display = newsShowVi ? 'block' : 'none';
+    });
+    showToast(newsShowVi ? '🇻🇳 Hiện tiếng Việt' : '🇬🇧 Ẩn tiếng Việt');
+  }
+
+  async function newsReadAll() {
+    if (!currentData || !currentData.paragraphs_en) return;
+    const paras = currentData.paragraphs_en;
+    
+    if (playAllRunning) {
+      stopAllSpeech();
+      showToast('⏹️ Đã dừng');
+      return;
+    }
+
+    playAllRunning = true;
+    showToast('▶️ Đang đọc bài báo...');
+
+    for (let i = 0; i < paras.length; i++) {
+      if (!playAllRunning) break;
+      const text = paras[i].replace(/\*\*/g, '');
+      const paraEls = document.querySelectorAll('.news-paragraph');
+      paraEls.forEach(p => p.classList.remove('playing'));
+      if (paraEls[i]) {
+        paraEls[i].classList.add('playing');
+        paraEls[i].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      await speakAndWait(text);
+    }
+
+    document.querySelectorAll('.news-paragraph').forEach(p => p.classList.remove('playing'));
+    playAllRunning = false;
+    showToast('✅ Đã đọc xong!');
   }
 
   // --- Parse & repair AI JSON ---
@@ -1546,8 +1858,12 @@ JSON format:
 
       loadingScreen.style.display = 'none';
       dbdResult.style.display = 'block';
-      activeTab = 'english';
-      renderDBDResult(data);
+      if (item.type === 'news' || data.paragraphs_en) {
+        renderNewsResult(data);
+      } else {
+        activeTab = 'english';
+        renderDBDResult(data);
+      }
     });
   }
 
@@ -1955,6 +2271,11 @@ JSON format:
     previewTheme,
     changeTTSEngine,
     stopAllSpeech,
+    switchMode,
+    switchNewsTab,
+    toggleNewsVi,
+    newsReadAll,
+    speakNewsParagraph,
   };
 
   // --- Start ---
