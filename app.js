@@ -93,7 +93,7 @@
       renderHistory();
     });
     deferWork(() => {
-      loadVoices();
+      initTTS();
     });
     deferWork(() => {
       initSelectionTranslator();
@@ -983,18 +983,27 @@ JSON format:
     }
   }
 
+  // Voice init: run ONCE at startup only
+  let ttsInitialized = false;
+
+  function initTTS() {
+    if (ttsInitialized) return;
+    ttsInitialized = true;
+
+    loadVoices();
+
+    // Remove listener after first load
+    if ('speechSynthesis' in window) {
+      speechSynthesis.onvoiceschanged = null;
+    }
+  }
+
   if ('speechSynthesis' in window) {
-    let voicesLoaded = false;
-    speechSynthesis.onvoiceschanged = () => {
-      if (!voicesLoaded) {
-        voicesLoaded = true;
-        loadVoices();
-      }
-    };
-    // Try loading immediately in case voices are already available
+    // Some browsers load voices async
     if (speechSynthesis.getVoices().length > 0) {
-      voicesLoaded = true;
-      // Will be called by init's deferred work
+      // Voices already available — init in deferred work from init()
+    } else {
+      speechSynthesis.onvoiceschanged = () => initTTS();
     }
   }
 
