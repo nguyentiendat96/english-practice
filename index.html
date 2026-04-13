@@ -47,7 +47,7 @@
                 <p class="subtitle">AI English Teacher — Tạo hội thoại & Luyện phát âm</p>
             </div>
             <div class="voice-controls">
-                <label class="voice-label">🔊</label>
+                <span class="tts-status" id="ttsStatus" title="Trạng thái giọng đọc">🔄 Đang kết nối...</span>
                 <select id="ttsEngineSelect" class="voice-select" onchange="app.changeTTSEngine(this.value)" title="Chọn giọng đọc">
                     <option value="browser" selected>🆓 Browser (Free)</option>
                     <option value="elevenlabs">🎙️ ElevenLabs (API)</option>

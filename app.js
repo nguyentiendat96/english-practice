@@ -906,6 +906,22 @@ JSON format:
   // ============================================
   // SPEECH - TTS
   // ============================================
+  function updateTTSStatus(state, text) {
+    const badge = document.getElementById('ttsStatus');
+    if (!badge) return;
+    badge.className = 'tts-status';
+    if (state === 'ready') {
+      badge.classList.add('ready');
+      badge.textContent = text || '✅ Sẵn sàng';
+    } else if (state === 'error') {
+      badge.classList.add('error');
+      badge.textContent = text || '❌ Lỗi';
+    } else {
+      // connecting
+      badge.textContent = text || '🔄 Đang kết nối...';
+    }
+  }
+
   function loadVoices() {
     const select = document.getElementById('voiceSelect');
     if (!select) return;
@@ -953,6 +969,18 @@ JSON format:
 
     const speedSlider = document.getElementById('voiceSpeed');
     if (speedSlider) speedSlider.value = speechRate;
+
+    // Update TTS status
+    if (ttsEngine === 'elevenlabs') {
+      updateTTSStatus('ready', '🎙️ ElevenLabs');
+    } else {
+      const count = select.options.length;
+      if (count > 0) {
+        updateTTSStatus('ready', `🔊 ${count} giọng`);
+      } else {
+        updateTTSStatus('error', '❌ Không có giọng');
+      }
+    }
   }
 
   if ('speechSynthesis' in window) {
@@ -1014,11 +1042,10 @@ JSON format:
           `<option value="${v.id}" ${v.id === getElevenLabsVoice() ? 'selected' : ''}>${v.name}</option>`
         ).join('');
       }
-      showToast('🎙️ ElevenLabs — Giọng AI cao cấp (cần API)');
+      updateTTSStatus('ready', '🎙️ ElevenLabs');
     } else {
       // Show browser voices
       loadVoices();
-      showToast('🆓 Browser Voice — Miễn phí, không cần API');
     }
   }
 

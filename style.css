@@ -212,6 +212,56 @@ button, a, select {
   cursor: pointer;
 }
 
+/* TTS Status Badge */
+.tts-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 165, 0, 0.15);
+  color: #ffaa00;
+  border: 1px solid rgba(255, 165, 0, 0.3);
+  white-space: nowrap;
+  transition: all 0.4s ease;
+  animation: tts-pulse 1.5s ease-in-out infinite;
+}
+
+.tts-status.ready {
+  background: rgba(52, 199, 89, 0.15);
+  color: #34c759;
+  border-color: rgba(52, 199, 89, 0.3);
+  animation: none;
+}
+
+.tts-status.error {
+  background: rgba(255, 69, 58, 0.15);
+  color: #ff453a;
+  border-color: rgba(255, 69, 58, 0.3);
+  animation: none;
+}
+
+@keyframes tts-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+[data-theme="light"] .tts-status {
+  background: rgba(255, 165, 0, 0.1);
+  border-color: rgba(255, 165, 0, 0.25);
+}
+
+[data-theme="light"] .tts-status.ready {
+  background: rgba(52, 199, 89, 0.1);
+  color: #248a3d;
+  border-color: rgba(52, 199, 89, 0.25);
+}
+
+[data-theme="light"] .tts-status.error {
+  background: rgba(255, 69, 58, 0.1);
+  color: #d70015;
+  border-color: rgba(255, 69, 58, 0.25);
+}
+
 /* ============================================
    COMMAND BAR
    ============================================ */
