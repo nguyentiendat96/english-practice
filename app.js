@@ -690,7 +690,10 @@ JSON format:
   function speakNewsParagraph(idx) {
     if (!currentData || !currentData.paragraphs_en) return;
     const text = (currentData.paragraphs_en[idx] || '').replace(/\*\*/g, '');
-    if (text) speak(text);
+    const paraEl = document.querySelectorAll('.news-paragraph')[idx];
+    const btn = paraEl ? paraEl.querySelector('.news-listen-btn') : null;
+    if (btn) btn.classList.add('inline-speak-btn');
+    if (text) speak(text, paraEl);
   }
 
   function switchNewsTab(tab) {
@@ -922,10 +925,10 @@ JSON format:
         </div>
         <div class="lesson-examples">
           ${(t.examples || []).map(ex => `
-            <div class="lesson-example" onclick="app.speak('${ex.en.replace(/\*\*/g, '').replace(/'/g, "\\\\'")}')" style="cursor:pointer">
+            <div class="lesson-example" onclick="app.speak('${ex.en.replace(/\*\*/g, '').replace(/'/g, "\\\\'")}', this)" style="cursor:pointer">
               <div class="example-en">${ex.en.replace(/\*\*(.*?)\*\*/g, '<strong class="news-keyword">$1</strong>')}</div>
               <div class="example-vi">${ex.vi}</div>
-              <span class="news-listen-btn" style="position:absolute;right:12px;top:50%;transform:translateY(-50%)">🔊</span>
+              <span class="inline-speak-btn" title="Nghe">🔊</span>
             </div>
           `).join('')}
         </div>
@@ -1119,7 +1122,7 @@ JSON format:
         </div>
         <div class="connector-grid">
           ${(cat.connectors || []).map(c => `
-            <div class="connector-item" onclick="app.speak('${c.word.replace(/'/g, "\\\\'")}')" style="cursor:pointer">
+            <div class="connector-item" onclick="app.speak('${c.word.replace(/'/g, "\\\\'")}', this)" style="cursor:pointer">
               <div class="connector-word">${c.word} <span class="connector-vi">${c.vi || ''}</span></div>
               <div class="connector-example">${(c.example || '').replace(/\*\*(.*?)\*\*/g, '<strong class="news-keyword">$1</strong>')}</div>
               <div class="connector-example-vi">${c.example_vi || ''}</div>
@@ -1421,7 +1424,7 @@ JSON format:
       const analysis = findAnalysisFast(cleanEn, analysisMap);
 
       turnChunks[i] = `<div class="dialogue-turn ${speakerClass} clickable-row" id="turn-${i}" data-en="${escapeAttr(cleanEn)}" onclick="app.toggleVi(${i})">
-                <div class="dialogue-avatar" onclick="app.speak('${escapeQuotes(cleanEn)}'); event.stopPropagation();" title="Nghe">🔊</div>
+                <div class="dialogue-avatar inline-speak-btn" onclick="app.speak('${escapeQuotes(cleanEn)}', this); event.stopPropagation();" title="Nghe">🔊</div>
                 <div class="dialogue-content">
                   <div class="dialogue-name">${speakerName}</div>
                   <div class="dialogue-en">${displayEn}</div>
@@ -1469,7 +1472,7 @@ JSON format:
 
       return `
               <div class="dialogue-turn ${speakerClass} clickable-row" id="turn-${i}" data-en="${escapeAttr(enText)}" onclick="app.revealEnglish(${i})">
-                <div class="dialogue-avatar" onclick="app.speak('${escapeQuotes(enText)}'); event.stopPropagation();" title="Nghe">🔊</div>
+                <div class="dialogue-avatar inline-speak-btn" onclick="app.speak('${escapeQuotes(enText)}', this); event.stopPropagation();" title="Nghe">🔊</div>
                 <div class="dialogue-content">
                   <div class="dialogue-name">${speakerName}</div>
                   <div class="dialogue-vi" style="display:block;font-style:normal;">${viText}</div>
@@ -1518,7 +1521,7 @@ JSON format:
                 <div class="vocab-example-vi">🇻🇳 ${v.example_vi || ''}</div>
               </div>
               <div class="vocab-card-actions">
-                <button class="dialogue-avatar" onclick="app.speak('${escapeQuotes(v.word || '')}'); event.stopPropagation();" title="Nghe">🔊</button>
+                <button class="dialogue-avatar inline-speak-btn" onclick="app.speak('${escapeQuotes(v.word || '')}', this); event.stopPropagation();" title="Nghe">🔊</button>
                 <button class="dialogue-btn" id="vocab-mic-${i}" onclick="app.recordVocab(${i}, '${escapeQuotes(v.word || '')}')" title="Đọc & chấm điểm">🎙️</button>
                 <div id="vocab-score-${i}" class="vocab-score-inline"></div>
               </div>
@@ -1866,6 +1869,12 @@ JSON format:
     // Reset state
     isSpeaking = false;
     document.querySelectorAll('.dialogue-turn').forEach(t => t.classList.remove('playing'));
+    // Reset all inline speaking indicators
+    document.querySelectorAll('.speaking-active').forEach(el => {
+      el.classList.remove('speaking-active');
+      const btn = el.querySelector('.inline-speak-btn');
+      if (btn) { btn.textContent = '🔊'; btn.title = 'Nghe'; }
+    });
     // Update stop button
     updateStopButton(false);
   }
@@ -1892,40 +1901,70 @@ JSON format:
     return false;
   }
 
-  function speak(text) {
-    if (!text || isDuplicate(text)) return;
+  // speakEl: optional DOM element to mark as speaking
+  function speak(text, speakEl) {
+    if (!text) return;
+
+    // If this element is already speaking, stop it
+    if (speakEl && speakEl.classList.contains('speaking-active')) {
+      stopAllSpeech();
+      return;
+    }
+
+    if (isDuplicate(text)) return;
     // Stop any ongoing speech first
     stopAllSpeech();
     isSpeaking = true;
     updateStopButton(true);
 
+    // Mark the element as speaking
+    if (speakEl) {
+      speakEl.classList.add('speaking-active');
+      const btn = speakEl.querySelector('.inline-speak-btn');
+      if (btn) { btn.textContent = '⏹'; btn.title = 'Dừng'; }
+    }
+
+    const onEnd = () => {
+      isSpeaking = false;
+      updateStopButton(false);
+      if (speakEl) {
+        speakEl.classList.remove('speaking-active');
+        const btn = speakEl.querySelector('.inline-speak-btn');
+        if (btn) { btn.textContent = '🔊'; btn.title = 'Nghe'; }
+      }
+    };
+
     if (ttsEngine === 'elevenlabs' && getElevenLabsKey()) {
       elevenLabsSpeak(text).then(url => {
         if (url) {
           currentAudio = new Audio(url);
-          currentAudio.onended = () => { isSpeaking = false; updateStopButton(false); };
-          currentAudio.onerror = () => { isSpeaking = false; updateStopButton(false); browserSpeak(text); };
+          currentAudio.onended = onEnd;
+          currentAudio.onerror = () => { onEnd(); browserSpeak(text); };
           currentAudio.play();
         } else {
-          browserSpeak(text);
+          browserSpeakWithCallback(text, onEnd);
         }
       });
     } else {
-      browserSpeak(text);
+      browserSpeakWithCallback(text, onEnd);
     }
   }
 
-  function browserSpeak(text) {
-    if (!('speechSynthesis' in window)) { isSpeaking = false; updateStopButton(false); return; }
+  function browserSpeakWithCallback(text, onEnd) {
+    if (!('speechSynthesis' in window)) { if (onEnd) onEnd(); return; }
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'en-US';
     utterance.rate = speechRate;
     utterance.pitch = 1;
     if (selectedVoice) utterance.voice = selectedVoice;
-    utterance.onend = () => { isSpeaking = false; updateStopButton(false); };
-    utterance.onerror = () => { isSpeaking = false; updateStopButton(false); };
+    utterance.onend = onEnd;
+    utterance.onerror = onEnd;
     window.speechSynthesis.speak(utterance);
+  }
+
+  function browserSpeak(text) {
+    browserSpeakWithCallback(text, () => { isSpeaking = false; updateStopButton(false); });
   }
 
   function speakAndWait(text) {

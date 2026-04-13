@@ -2840,3 +2840,51 @@ select.settings-input {
     grid-template-columns: 1fr;
   }
 }
+
+/* Inline Speak/Stop Button */
+.inline-speak-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 2;
+}
+
+.speaking-active {
+  border-color: var(--accent-primary) !important;
+  background: rgba(255, 180, 50, 0.06) !important;
+}
+
+.speaking-active .inline-speak-btn {
+  animation: pulse-stop 1.2s infinite;
+}
+
+@keyframes pulse-stop {
+  0%, 100% { transform: translateY(-50%) scale(1); }
+  50% { transform: translateY(-50%) scale(1.15); }
+}
+
+/* dialogue-avatar as inline-speak-btn */
+.dialogue-avatar.inline-speak-btn {
+  position: relative;
+  right: auto;
+  top: auto;
+  transform: none;
+}
+
+.dialogue-turn.speaking-active {
+  border-left-color: var(--accent-primary) !important;
+}
+
+.dialogue-turn.speaking-active .dialogue-avatar.inline-speak-btn {
+  animation: pulse-avatar 1.2s infinite;
+}
+
+@keyframes pulse-avatar {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
