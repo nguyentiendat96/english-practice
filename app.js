@@ -444,12 +444,39 @@
     const goBtn = document.getElementById('commandGoBtn');
     if (goBtn) { goBtn.disabled = true; goBtn.querySelector('span').textContent = 'Generating...'; }
 
+    // Random elements for variety
+    const scenarios = [
+      'a surprising discovery', 'a disagreement that gets resolved', 'making plans together',
+      'sharing exciting news', 'asking for advice', 'a funny misunderstanding',
+      'comparing experiences', 'solving a problem together', 'a debate about preferences',
+      'planning a surprise', 'discussing a recent event', 'giving honest feedback',
+      'negotiating a deal', 'reminiscing about the past', 'making a difficult decision',
+      'celebrating an achievement', 'handling a complaint', 'learning something new together',
+      'a chance encounter', 'discussing future goals'
+    ];
+    const moods = ['humorous', 'serious', 'casual', 'enthusiastic', 'reflective', 'dramatic', 'lighthearted', 'curious'];
+    const settings = [
+      'at a coffee shop', 'during a lunch break', 'on a bus ride', 'at a park',
+      'in a meeting room', 'at a party', 'on a phone call', 'at the supermarket',
+      'waiting in line', 'at the gym', 'in a library', 'at home after work',
+      'on a rooftop', 'at a bookstore', 'during a walk', 'at a food market'
+    ];
+    const randomScenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+    const randomMood = moods[Math.floor(Math.random() * moods.length)];
+    const randomSetting = settings[Math.floor(Math.random() * settings.length)];
+    const randomSeed = Math.floor(Math.random() * 99999);
+
     const systemPrompt = `You are "English DBD", an expert English teacher. Output ONLY valid JSON.
 
 Topic: ${topic}
 Level: ${level} - ${levelDesc}
+Scenario: ${randomScenario}
+Setting: ${randomSetting}
+Mood/Tone: ${randomMood}
+Seed: ${randomSeed}
 
-Create a dialogue between 2 people with ${turns} turns.
+Create a UNIQUE and CREATIVE dialogue between 2 people with ${turns} turns.
+IMPORTANT: Each dialogue MUST be completely different. Use different character names, different specific situations, different storylines every time. NEVER repeat the same conversation pattern.
 ${level.includes('-') ? 'This is a BRIDGING level. Make the dialogue progress from simpler structures to more complex ones, or have Speaker A use the lower level and Speaker B use the higher level.' : ''}
 Each turn MUST be ${sentenceLengthMap[sentenceLength] || sentenceLengthMap['medium']} NEVER write short sentences like "Hi" or "Sure". Each turn should have meaningful content with multiple clauses.
 Bold all verbs with **verb** format. Use connectors appropriate for ${level}.
@@ -461,8 +488,8 @@ JSON format:
     try {
       const content = await callAI(
         systemPrompt,
-        `Generate dialogue. Topic: ${topic}. Level: ${level}.`,
-        { maxTokens: 4000, temperature: 0.7, jsonMode: true }
+        `Generate a unique dialogue. Topic: ${topic}. Level: ${level}. Scenario: ${randomScenario}. Setting: ${randomSetting}. Tone: ${randomMood}. Seed: ${randomSeed}.`,
+        { maxTokens: 4000, temperature: 0.9, jsonMode: true }
       );
 
       let result = parseAIResponse(content);
