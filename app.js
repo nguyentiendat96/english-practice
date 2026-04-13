@@ -7,6 +7,8 @@
   // --- State ---
   let currentData = null; // current DBD result
   let currentCommand = '';
+  // Per-mode content cache: saves HTML + data when switching tabs
+  const modeCache = { dialogue: null, news: null, tenses: null, linkwords: null };
   let historyMeta = []; // lightweight metadata only (no full data)
   let showVietnamese = true;
 
@@ -113,13 +115,17 @@
   };
 
   function switchMode(mode) {
+    // Save current mode's content before switching
+    if (currentMode && dbdResult) {
+      modeCache[currentMode] = {
+        html: dbdResult.innerHTML,
+        data: currentData,
+        visible: dbdResult.style.display !== 'none'
+      };
+    }
+
     currentMode = mode;
     // Update all tab active states
-    ['modeDialogue', 'modeNews', 'modeTenses', 'modeLinkwords'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.classList.toggle('active', id === 'mode' + mode.charAt(0).toUpperCase() + mode.slice(1));
-    });
-    // Fix casing for ids
     document.getElementById('modeDialogue')?.classList.toggle('active', mode === 'dialogue');
     document.getElementById('modeNews')?.classList.toggle('active', mode === 'news');
     document.getElementById('modeTenses')?.classList.toggle('active', mode === 'tenses');
@@ -142,6 +148,26 @@
     // Update button text
     const goBtn = document.getElementById('commandGoBtn');
     if (goBtn) goBtn.querySelector('span').textContent = modeLabels[mode] || 'Generate →';
+
+    // Restore target mode's cached content
+    const cached = modeCache[mode];
+    if (cached && cached.html) {
+      dbdResult.innerHTML = cached.html;
+      dbdResult.style.display = cached.visible ? 'block' : 'none';
+      currentData = cached.data;
+      // Hide welcome/loading
+      if (cached.visible) {
+        welcomeScreen.style.display = 'none';
+        loadingScreen.style.display = 'none';
+      }
+    } else {
+      // No cached content for this mode: show welcome
+      dbdResult.style.display = 'none';
+      dbdResult.innerHTML = '';
+      currentData = null;
+      welcomeScreen.style.display = '';
+      loadingScreen.style.display = 'none';
+    }
   }
 
   function executeCommand() {
