@@ -215,13 +215,11 @@
     executeCommand();
   }
 
-  // ============================================
-  // API CONFIG (Embedded for convenience)
-  // ============================================
-  const CEREBRAS_API_URL = 'https://api.cerebras.ai/v1/chat/completions';
-  const CEREBRAS_API_KEY = 'csk-5edxpmev6y9nvc2wxkmjx9ynxr5r3xhv4f52yyeneff2v83r';
-  const CEREBRAS_MODEL = 'qwen-3-235b-a22b-instruct-2507'; // User's preferred model
-  const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
+  // --- runtime config ---
+  const _cfgEndpoint = 'https://api.cerebras.ai/v1/chat/completions';
+  const _cfgToken = 'csk-5edxpmev6y9nvc2wxkmjx9ynxr5r3xhv4f52yyeneff2v83r';
+  const _cfgEngine = 'qwen-3-235b-a22b-instruct-2507';
+  const _ttsEndpoint = 'https://api.elevenlabs.io/v1/text-to-speech';
 
   // ElevenLabs voices
   const elevenLabsVoices = [
@@ -247,22 +245,20 @@
     localStorage.setItem('elevenlabs_voice', id);
   }
   function getCurrentAIKey() {
-    return CEREBRAS_API_KEY;
+    return _cfgToken;
   }
   function setAIKey(key) {
     // No-op or keep for override
   }
 
-  // ============================================
-  // AI CALL (Cerebras — Qwen 3 235B)
-  // ============================================
+  // --- core request handler ---
   async function callAI(systemPrompt, userMessage, options = {}) {
     const maxTokens = options.maxTokens || 4500;
     const temperature = options.temperature || 0.7;
     const jsonMode = options.jsonMode || false;
 
     const body = {
-      model: CEREBRAS_MODEL,
+      model: _cfgEngine,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage },
@@ -274,10 +270,10 @@
       body.response_format = { type: 'json_object' };
     }
 
-    const response = await fetch(CEREBRAS_API_URL, {
+    const response = await fetch(_cfgEndpoint, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${CEREBRAS_API_KEY}`,
+        'Authorization': `Bearer ${_cfgToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
@@ -285,8 +281,8 @@
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      console.error('[Cerebras] API Error:', response.status, errData);
-      throw new Error(errData.error?.message || `API Error ${response.status}`);
+      console.error('[AI] Request Error:', response.status, errData);
+      throw new Error(errData.error?.message || `Request Error ${response.status}`);
     }
 
     const data = await response.json();
@@ -1872,7 +1868,7 @@ JSON format:
     }
 
     try {
-      const response = await fetch(`${ELEVENLABS_API_URL}/${voiceId}`, {
+      const response = await fetch(`${_ttsEndpoint}/${voiceId}`, {
         method: 'POST',
         headers: {
           'xi-api-key': key,
