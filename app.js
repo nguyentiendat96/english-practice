@@ -1527,10 +1527,10 @@ JSON format:
                   <div class="dialogue-vi" style="display:block;font-style:normal;">${viText}</div>
                   <div class="practice-write-area" id="write-area-${i}" onclick="event.stopPropagation()">
                     <div class="practice-write-row">
-                      <input type="text" class="practice-write-input" id="write-input-${i}" 
-                             placeholder="Viết lại bằng tiếng Anh..." 
+                      <textarea class="practice-write-input" id="write-input-${i}" 
+                             placeholder="Viết lại bằng tiếng Anh..." rows="3"
                              autocomplete="off" spellcheck="false"
-                             onkeydown="if(event.key==='Enter') app.checkWriting(${i})">
+                             onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)) app.checkWriting(${i})"></textarea>
                       <button class="practice-write-check" onclick="app.checkWriting(${i})" title="Kiểm tra">→</button>
                     </div>
                     <div id="write-result-${i}"></div>
