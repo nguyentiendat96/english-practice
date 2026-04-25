@@ -215,11 +215,11 @@
     executeCommand();
   }
 
-  // --- runtime config ---
-  const _cfgEndpoint = 'https://api.cerebras.ai/v1/chat/completions';
-  const _cfgToken = 'csk-5edxpmev6y9nvc2wxkmjx9ynxr5r3xhv4f52yyeneff2v83r';
-  const _cfgEngine = 'qwen-3-235b-a22b-instruct-2507';
-  const _ttsEndpoint = 'https://api.elevenlabs.io/v1/text-to-speech';
+  // --- runtime config (from config.js) ---
+  const _cfgEndpoint = (window.CONFIG && window.CONFIG.cerebrasEndpoint) || 'https://api.cerebras.ai/v1/chat/completions';
+  const _cfgToken = (window.CONFIG && window.CONFIG.cerebrasToken) || '';
+  const _cfgEngine = (window.CONFIG && window.CONFIG.cerebrasEngine) || 'qwen-3-235b-a22b-instruct-2507';
+  const _ttsEndpoint = (window.CONFIG && window.CONFIG.elevenlabsEndpoint) || 'https://api.elevenlabs.io/v1/text-to-speech';
 
   // ElevenLabs voices
   const elevenLabsVoices = [
@@ -233,7 +233,7 @@
 
   // --- API Key Helpers ---
   function getElevenLabsKey() {
-    return 'sk_a2c351511388d19b182e482ec391e4b9a41f588bc0d9e20c';
+    return (window.CONFIG && window.CONFIG.elevenlabsKey) || localStorage.getItem('elevenlabs_api_key') || '';
   }
   function setElevenLabsKey(key) {
     localStorage.setItem('elevenlabs_api_key', key.trim());
