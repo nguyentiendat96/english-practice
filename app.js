@@ -1,5 +1,5 @@
 // ============================================
-// ENGLISH DBD - App Logic
+  // LANGUAGE DBD - App Logic
 // ============================================
 (function () {
   'use strict';
@@ -1458,7 +1458,7 @@ JSON format:
     }
   }
 
-  // --- 🇬🇧 English Tab: English only, listen & read ---
+  // --- Target language tab: listen & read ---
   // Pre-build analysis map once per data set to avoid O(n*m) per sentence
   let _analysisCache = null;
   let _analysisCacheDataRef = null;
@@ -1554,7 +1554,7 @@ JSON format:
     `;
   }
 
-  // --- 🇻🇳 Practice Tab: See Vietnamese, speak/write English, get scored ---
+  // --- 🇻🇳 Practice Tab: See Vietnamese, speak/write target language, get scored ---
   function renderPracticeSection(container, data) {
     const enLines = data.dialogue_en || [];
     const viLines = data.dialogue_vi || [];
