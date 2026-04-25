@@ -46,12 +46,15 @@
       method: 'POST', headers: headers(), body: JSON.stringify({ email, password })
     });
     const data = await res.json();
-    if (!res.ok || data.error) throw new Error(data.msg || data.error_description || data.error || 'Đăng nhập thất bại');
-    const user = data.user;
+    if (!res.ok) {
+      const msg = data.msg || data.error_description || data.error || data.message || 'Sai email hoặc mật khẩu';
+      throw new Error(msg);
+    }
+    if (!data.user) throw new Error('Sai email hoặc mật khẩu');
     saveTokens(data.access_token, data.refresh_token);
-    _user = user;
-    notify(user);
-    return user;
+    _user = data.user;
+    notify(data.user);
+    return data.user;
   }
 
   async function signUp(email, password) {
@@ -59,9 +62,15 @@
       method: 'POST', headers: headers(), body: JSON.stringify({ email, password })
     });
     const data = await res.json();
-    if (!res.ok || data.error) throw new Error(data.msg || data.error_description || data.error || 'Đăng ký thất bại');
+    if (!res.ok) {
+      const msg = data.msg || data.error_description || data.error || data.message || `Lỗi ${res.status}`;
+      // 422 = user already exists
+      if (res.status === 422) throw new Error('Email đã tồn tại');
+      throw new Error(msg);
+    }
     if (data.access_token) saveTokens(data.access_token, data.refresh_token);
-    if (data.user) { _user = data.user; notify(data.user); }
+    const userData = data.user || data;
+    if (userData?.id) { _user = userData; notify(userData); }
     return data;
   }
 

@@ -2798,7 +2798,7 @@ JSON format:
     const email = document.getElementById('authEmail')?.value.trim();
     const password = document.getElementById('authPassword')?.value;
     const errEl = document.getElementById('authError');
-    if (!email || !password) { errEl.textContent = 'Vui lòng nhập email và mật khẩu'; return; }
+    if (!email || !password) { errEl.textContent = 'Vui lòng nhập email và mật khẩu'; showToast('❌ Vui lòng nhập email và mật khẩu'); return; }
     errEl.textContent = '⏳ Đang đăng nhập...';
     try {
       const user = await window.sync.auth.signIn(email, password);
@@ -2806,11 +2806,12 @@ JSON format:
       updateSyncBadge(true);
       closeAuthModal();
       showToast('✅ Đã đăng nhập! Dữ liệu đã đồng bộ.');
-      // Reload history with cloud data
       await initHistory();
       renderHistory();
     } catch (e) {
-      errEl.textContent = '❌ ' + (e.message || 'Đăng nhập thất bại');
+      const msg = e.message || 'Đăng nhập thất bại';
+      errEl.textContent = '❌ ' + msg;
+      showToast('❌ ' + msg);
     }
   }
 
@@ -2818,25 +2819,31 @@ JSON format:
     const email = document.getElementById('authEmail2')?.value.trim();
     const password = document.getElementById('authPassword2')?.value;
     const errEl = document.getElementById('authError');
-    if (!email || !password) { errEl.textContent = 'Vui lòng nhập email và mật khẩu'; return; }
-    if (password.length < 6) { errEl.textContent = 'Mật khẩu phải từ 6 ký tự'; return; }
+    if (!email || !password) { errEl.textContent = 'Vui lòng nhập email và mật khẩu'; showToast('❌ Vui lòng nhập email và mật khẩu'); return; }
+    if (password.length < 6) { errEl.textContent = 'Mật khẩu phải từ 6 ký tự'; showToast('❌ Mật khẩu phải từ 6 ký tự'); return; }
     errEl.textContent = '⏳ Đang đăng ký...';
     try {
       const result = await window.sync.auth.signUp(email, password);
       closeAuthModal();
-      if (result?.user?.identities?.length === 0) {
-        showToast('📧 Email đã tồn tại. Vui lòng đăng nhập.');
-      } else if (result?.user) {
-        updateUserMenu(result.user);
-        updateSyncBadge(true);
-        showToast('✅ Đăng ký thành công! Dữ liệu đã đồng bộ.');
-        await initHistory();
-        renderHistory();
+      // Kiểm tra user có được tạo thành công không
+      if (result?.id || result?.user?.id) {
+        const user = result?.user || result;
+        if (result.code === 422) {
+          showToast('📧 Email đã tồn tại, vui lòng đăng nhập!');
+        } else {
+          updateUserMenu(user);
+          updateSyncBadge(true);
+          showToast('✅ Đăng ký thành công! Dữ liệu đã đồng bộ.');
+          await initHistory();
+          renderHistory();
+        }
       } else {
         showToast('📧 Kiểm tra email để xác nhận đăng ký!');
       }
     } catch (e) {
-      errEl.textContent = '❌ ' + (e.message || 'Đăng ký thất bại');
+      const msg = e.message || 'Đăng ký thất bại';
+      errEl.textContent = '❌ ' + msg;
+      showToast('❌ ' + msg);
     }
   }
 

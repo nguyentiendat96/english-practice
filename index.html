@@ -257,7 +257,6 @@
             <input type="password" id="authPassword" class="settings-input" placeholder="••••••••" autocomplete="current-password">
           </div>
           <button class="settings-save auth-submit" onclick="app.authLogin()">Đăng nhập</button>
-          <div id="authError" class="auth-error"></div>
         </div>
         <div id="authFormSignup" style="display:none">
           <div class="settings-group">
@@ -271,6 +270,7 @@
           <button class="settings-save auth-submit" onclick="app.authSignup()">Đăng ký</button>
           <p class="auth-hint">Sau khi đăng ký, bạn có thể dùng tài khoản trên mọi thiết bị.</p>
         </div>
+        <div id="authError" class="auth-error"></div>
         <div class="auth-footer">
           <button class="auth-skip" onclick="app.closeAuthModal()">Bỏ qua → Dùng offline</button>
         </div>
