@@ -1952,47 +1952,69 @@ JSON format:
     showToast(`${getLanguage().flag} Đã chuyển sang ${getLanguage().nativeName}`);
   }
 
-  // --- ElevenLabs TTS ---
-  const audioCache = new Map();
-  let currentAudio = null;
+  // --- AudioContext: unlock iOS Safari ---
+  let _audioCtx = null;
+  function ensureAudioCtx() {
+    if (!_audioCtx) {
+      _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (_audioCtx.state === 'suspended') return _audioCtx.resume();
+    return Promise.resolve();
+  }
+  // Unlock AudioContext on first user touch/click
+  document.addEventListener('touchstart', ensureAudioCtx, { once: true, passive: true });
+  document.addEventListener('click', ensureAudioCtx, { once: true });
 
-  async function elevenLabsSpeak(text) {
+  // --- ElevenLabs TTS (AudioContext-based, iOS Safari compatible) ---
+  const audioCache = new Map(); // cacheKey -> AudioBuffer
+  let _currentSource = null;
+
+  async function elevenLabsFetch(text) {
     const key = getElevenLabsKey();
     const voiceId = getElevenLabsVoice();
     if (!key) return null;
 
-    // Check cache
     const cacheKey = `${voiceId}_${text}`;
-    if (audioCache.has(cacheKey)) {
-      return audioCache.get(cacheKey);
-    }
+    if (audioCache.has(cacheKey)) return audioCache.get(cacheKey);
 
     try {
       const response = await fetch(`${_ttsEndpoint}/${voiceId}`, {
         method: 'POST',
-        headers: {
-          'xi-api-key': key,
-          'Content-Type': 'application/json',
-        },
+        headers: { 'xi-api-key': key, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: text,
           model_id: 'eleven_multilingual_v2',
-          voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75,
-            speed: speechRate,
-          },
+          voice_settings: { stability: 0.5, similarity_boost: 0.75, speed: speechRate },
         }),
       });
-
       if (!response.ok) return null;
 
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      audioCache.set(cacheKey, url);
-      return url;
+      await ensureAudioCtx();
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await _audioCtx.decodeAudioData(arrayBuffer);
+      audioCache.set(cacheKey, audioBuffer);
+      return audioBuffer;
     } catch (e) {
       return null;
+    }
+  }
+
+  function playAudioBuffer(buffer, onEnd) {
+    if (!_audioCtx || !buffer) return false;
+    try {
+      const source = _audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(_audioCtx.destination);
+      source.onended = () => {
+        if (_currentSource === source) _currentSource = null;
+        if (onEnd) onEnd();
+      };
+      _currentSource = source;
+      source.start(0);
+      return true;
+    } catch (e) {
+      if (onEnd) onEnd();
+      return false;
     }
   }
 
@@ -2000,73 +2022,48 @@ JSON format:
   let isSpeaking = false;
   let lastSpokenText = '';
   let lastSpokenTime = 0;
-  const DUPLICATE_THRESHOLD_MS = 2000; // ignore same text within 2s
+  const DUPLICATE_THRESHOLD_MS = 2000;
 
   function stopAllSpeech() {
-    // Stop browser TTS
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    if (_currentSource) {
+      try { _currentSource.stop(); } catch (e) {}
+      _currentSource = null;
     }
-    // Stop ElevenLabs audio
-    if (currentAudio) {
-      currentAudio.pause();
-      currentAudio.currentTime = 0;
-      currentAudio = null;
-    }
-    // Stop playAll
     playAllRunning = false;
-    // Reset state
     isSpeaking = false;
     document.querySelectorAll('.dialogue-turn').forEach(t => t.classList.remove('playing'));
-    // Reset all inline speaking indicators
     document.querySelectorAll('.speaking-active').forEach(el => {
       el.classList.remove('speaking-active');
       const btn = el.querySelector('.inline-speak-btn');
       if (btn) { btn.textContent = '🔊'; btn.title = 'Nghe'; }
     });
-    // Update stop button
     updateStopButton(false);
   }
 
   function updateStopButton(speaking) {
     const btn = document.getElementById('ttsStopBtn');
     if (!btn) return;
-    if (speaking) {
-      btn.style.display = 'inline-flex';
-      btn.classList.add('active');
-    } else {
-      btn.classList.remove('active');
-      btn.style.display = 'none';
-    }
+    if (speaking) { btn.style.display = 'inline-flex'; btn.classList.add('active'); }
+    else { btn.classList.remove('active'); btn.style.display = 'none'; }
   }
 
   function isDuplicate(text) {
     const now = Date.now();
-    if (text === lastSpokenText && (now - lastSpokenTime) < DUPLICATE_THRESHOLD_MS) {
-      return true;
-    }
+    if (text === lastSpokenText && (now - lastSpokenTime) < DUPLICATE_THRESHOLD_MS) return true;
     lastSpokenText = text;
     lastSpokenTime = now;
     return false;
   }
 
-  // speakEl: optional DOM element to mark as speaking
   function speak(text, speakEl) {
     if (!text) return;
-
-    // If this element is already speaking, stop it
-    if (speakEl && speakEl.classList.contains('speaking-active')) {
-      stopAllSpeech();
-      return;
-    }
-
+    if (speakEl && speakEl.classList.contains('speaking-active')) { stopAllSpeech(); return; }
     if (isDuplicate(text)) return;
-    // Stop any ongoing speech first
     stopAllSpeech();
     isSpeaking = true;
     updateStopButton(true);
 
-    // Mark the element as speaking
     if (speakEl) {
       speakEl.classList.add('speaking-active');
       const btn = speakEl.classList.contains('inline-speak-btn') ? speakEl : speakEl.querySelector('.inline-speak-btn');
@@ -2084,15 +2081,9 @@ JSON format:
     };
 
     if (ttsEngine === 'elevenlabs' && getElevenLabsKey()) {
-      elevenLabsSpeak(text).then(url => {
-        if (url) {
-          currentAudio = new Audio(url);
-          currentAudio.onended = onEnd;
-          currentAudio.onerror = () => { onEnd(); browserSpeak(text); };
-          currentAudio.play();
-        } else {
-          browserSpeakWithCallback(text, onEnd);
-        }
+      elevenLabsFetch(text).then(buffer => {
+        if (buffer && playAudioBuffer(buffer, onEnd)) return;
+        browserSpeakWithCallback(text, onEnd);
       });
     } else {
       browserSpeakWithCallback(text, onEnd);
@@ -2104,8 +2095,7 @@ JSON format:
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = getLanguage().speechLang;
-    utterance.rate = speechRate;
-    utterance.pitch = 1;
+    utterance.rate = speechRate; utterance.pitch = 1;
     if (selectedVoice) utterance.voice = selectedVoice;
     utterance.onend = onEnd;
     utterance.onerror = onEnd;
@@ -2118,26 +2108,21 @@ JSON format:
 
   function speakAndWait(text) {
     if (!text) return Promise.resolve();
-    // Stop any ongoing speech first
     stopAllSpeech();
     isSpeaking = true;
     updateStopButton(true);
 
     if (ttsEngine === 'elevenlabs' && getElevenLabsKey()) {
-      return new Promise(async resolve => {
-        const url = await elevenLabsSpeak(text);
-        if (url) {
-          currentAudio = new Audio(url);
-          currentAudio.onended = () => { isSpeaking = false; updateStopButton(false); setTimeout(resolve, 400); };
-          currentAudio.onerror = () => { isSpeaking = false; updateStopButton(false); browserSpeakAndWait(text).then(resolve); };
-          currentAudio.play();
-        } else {
-          browserSpeakAndWait(text).then(resolve);
+      return elevenLabsFetch(text).then(buffer => {
+        if (buffer) {
+          return new Promise(resolve => {
+            playAudioBuffer(buffer, () => { isSpeaking = false; updateStopButton(false); setTimeout(resolve, 400); });
+          });
         }
+        return browserSpeakAndWait(text);
       });
-    } else {
-      return browserSpeakAndWait(text);
     }
+    return browserSpeakAndWait(text);
   }
 
   function browserSpeakAndWait(text) {
@@ -2146,8 +2131,7 @@ JSON format:
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = getLanguage().speechLang;
-      utterance.rate = speechRate;
-      utterance.pitch = 1;
+      utterance.rate = speechRate; utterance.pitch = 1;
       if (selectedVoice) utterance.voice = selectedVoice;
       utterance.onend = () => { isSpeaking = false; updateStopButton(false); setTimeout(resolve, 400); };
       utterance.onerror = () => { isSpeaking = false; updateStopButton(false); resolve(); };
