@@ -47,6 +47,10 @@
                 <p class="subtitle">AI English Teacher — Tạo hội thoại & Luyện phát âm</p>
             </div>
             <div class="voice-controls">
+                <select id="languageSelect" class="voice-select" onchange="app.changeLanguage(this.value)" title="Chọn ngôn ngữ học">
+                    <option value="en" selected>🇬🇧 English</option>
+                    <option value="fr">🇫🇷 Français</option>
+                </select>
                 <span class="tts-status" id="ttsStatus" title="Trạng thái giọng đọc">🔄 Đang kết nối...</span>
                 <button class="tts-stop-btn" id="ttsStopBtn" onclick="app.stopAllSpeech()" title="Dừng đọc" style="display:none">⏹</button>
                 <select id="ttsEngineSelect" class="voice-select" onchange="app.changeTTSEngine(this.value)" title="Chọn giọng đọc">
@@ -228,6 +232,6 @@
     </div>
 
     <script src="config.js" defer></script>
-    <script src="app.js?v=35" defer></script>
+    <script src="app.js?v=36" defer></script>
 </body>
 </html>

@@ -11,6 +11,44 @@
   const modeCache = { dialogue: null, news: null, tenses: null, linkwords: null };
   let historyMeta = []; // lightweight metadata only (no full data)
   let showVietnamese = true;
+  let targetLanguage = localStorage.getItem('targetLanguage') || 'en';
+
+  const languageSettings = {
+    en: {
+      name: 'English',
+      nativeName: 'English',
+      flag: '🇬🇧',
+      speechLang: 'en-US',
+      voicePrefix: 'en',
+      articleName: 'news article',
+      teacherName: 'English teacher',
+      dialogueText: 'English with **bolded verbs**',
+      tabLabel: '🇬🇧 English',
+      practiceAction: 'Viết lại bằng tiếng Anh...',
+      chatTutor: 'English tutor',
+      dictionary: 'English-Vietnamese dictionary',
+      translateLabel: 'Translate this English word/phrase',
+    },
+    fr: {
+      name: 'French',
+      nativeName: 'Français',
+      flag: '🇫🇷',
+      speechLang: 'fr-FR',
+      voicePrefix: 'fr',
+      articleName: 'French reading article',
+      teacherName: 'French teacher',
+      dialogueText: 'French with **bolded verbs**',
+      tabLabel: '🇫🇷 Français',
+      practiceAction: 'Viết lại bằng tiếng Pháp...',
+      chatTutor: 'French tutor',
+      dictionary: 'French-Vietnamese dictionary',
+      translateLabel: 'Translate this French word/phrase',
+    },
+  };
+
+  function getLanguage() {
+    return languageSettings[targetLanguage] || languageSettings.en;
+  }
 
   // --- Performance: Lazy-load history ---
   // History metadata (title, level, topic, timestamp, command, dataKey) stored in 'dbdHistoryMeta'
@@ -87,6 +125,9 @@
     ttsEngine = savedEngine;
     const engineSelect = document.getElementById('ttsEngineSelect');
     if (engineSelect) engineSelect.value = savedEngine;
+
+    const languageSelect = document.getElementById('languageSelect');
+    if (languageSelect) languageSelect.value = targetLanguage;
 
     // Defer heavy work to after first paint
     const deferWork = window.requestIdleCallback || ((cb) => setTimeout(cb, 50));
@@ -461,8 +502,12 @@
     const randomMood = moods[Math.floor(Math.random() * moods.length)];
     const randomSetting = settings[Math.floor(Math.random() * settings.length)];
     const randomSeed = Math.floor(Math.random() * 99999);
+    const lang = getLanguage();
 
-    const systemPrompt = `You are "English DBD", an expert English teacher. Output ONLY valid JSON.
+    const systemPrompt = `You are "Language DBD", an expert ${lang.teacherName}. Output ONLY valid JSON.
+
+Target language: ${lang.name} (${lang.nativeName})
+All learning content in dialogue_en MUST be in ${lang.name}. All dialogue_vi content MUST be Vietnamese translation.
 
 Topic: ${topic}
 Level: ${level} - ${levelDesc}
@@ -479,12 +524,12 @@ Bold all verbs with **verb** format. Use connectors appropriate for ${level}.
 ${level === 'B1' ? 'Use intermediate vocabulary: appreciate, opportunity, significant, recommend, eventually, meanwhile, regarding, considerably' : level === 'B2' ? 'Use advanced vocabulary: predominantly, anticipate, comprehensive, elaborate, nevertheless, unprecedented, substantial' : level === 'A2' ? 'Use elementary vocabulary: prefer, suggest, improve, arrange, experience' : 'Use basic vocabulary: want, need, go, eat, buy, like'}
 
 JSON format:
-{"title":"...","topic":"${topic}","level":"${level}","dialogue_en":[{"speaker":"A","name":"Name","text":"English with **bolded verbs**"}],"dialogue_vi":[{"speaker":"A","name":"Name","text":"Vietnamese translation"}]}`;
+{"title":"...","topic":"${topic}","level":"${level}","language":"${targetLanguage}","dialogue_en":[{"speaker":"A","name":"Name","text":"${lang.dialogueText}"}],"dialogue_vi":[{"speaker":"A","name":"Name","text":"Vietnamese translation"}]}`;
 
     try {
       const content = await callAI(
         systemPrompt,
-        `Generate a unique dialogue. Topic: ${topic}. Level: ${level}. Scenario: ${randomScenario}. Setting: ${randomSetting}. Tone: ${randomMood}. Seed: ${randomSeed}.`,
+        `Generate a unique ${lang.name} dialogue. Topic: ${topic}. Level: ${level}. Scenario: ${randomScenario}. Setting: ${randomSetting}. Tone: ${randomMood}. Seed: ${randomSeed}.`,
         { maxTokens: 4000, temperature: 0.9, jsonMode: true }
       );
 
@@ -552,6 +597,7 @@ JSON format:
     const level = match[2].toUpperCase();
     const topic = (type === 'custom' && customTopic) ? customTopic : (topicMap[type] || `News about ${type}`);
     const levelDesc = levelDescriptions[level] || levelDescriptions['B1'];
+    const lang = getLanguage();
 
     // Show loading
     welcomeScreen.style.display = 'none';
@@ -579,14 +625,16 @@ JSON format:
     const goBtn = document.getElementById('commandGoBtn');
     if (goBtn) { goBtn.disabled = true; goBtn.querySelector('span').textContent = 'Generating...'; }
 
-    const systemPrompt = `You are "English DBD News", an expert English teacher who creates news articles for language learning. Output ONLY valid JSON.
+    const systemPrompt = `You are "Language DBD News", an expert ${lang.teacherName} who creates reading articles for language learning. Output ONLY valid JSON.
+
+Target language: ${lang.name} (${lang.nativeName})
 
 Topic: ${topic}
 Level: ${level} - ${levelDesc}
 
-Write a NEWS ARTICLE (250-400 words) about "${topic}". The article should:
+Write a ${lang.articleName.toUpperCase()} (250-400 words) about "${topic}". The article should:
 - Have a catchy headline
-- Be written at ${level} level
+- Be written in ${lang.name} at ${level} level
 - Bold all IMPORTANT vocabulary words with **word** format
 - Be divided into 4-6 short paragraphs
 - Be realistic and informative like a real news article
@@ -601,6 +649,7 @@ JSON format:
   "headline": "News Headline",
   "topic": "${topic}",
   "level": "${level}",
+  "language": "${targetLanguage}",
   "paragraphs_en": ["paragraph 1 with **bold vocab**", "paragraph 2..."],
   "paragraphs_vi": ["Vietnamese translation 1", "Vietnamese translation 2..."],
   "vocabulary": [{"word": "word", "ipa": "/pronunciation/", "vi": "Vietnamese meaning", "example": "Example sentence"}],
@@ -610,7 +659,7 @@ JSON format:
     try {
       const content = await callAI(
         systemPrompt,
-        `Write a news article about: ${topic}. Level: ${level}`,
+        `Write a ${lang.name} reading article about: ${topic}. Level: ${level}`,
         { maxTokens: 4000, temperature: 0.7, jsonMode: true }
       );
 
@@ -836,6 +885,7 @@ JSON format:
     }
 
     const levelDesc = levelDescriptions[level.toUpperCase()] || levelDescriptions['B1'];
+    const lang = getLanguage();
 
     welcomeScreen.style.display = 'none';
     dbdResult.style.display = 'none';
@@ -861,11 +911,13 @@ JSON format:
     const goBtn = document.getElementById('commandGoBtn');
     if (goBtn) { goBtn.disabled = true; goBtn.querySelector('span').textContent = 'Generating...'; }
 
-    const systemPrompt = `You are "English DBD Tenses", an expert English grammar teacher. Output ONLY valid JSON.
+    const systemPrompt = `You are "Language DBD Tenses", an expert ${lang.name} grammar teacher. Output ONLY valid JSON.
+
+Target language: ${lang.name} (${lang.nativeName})
 
 Level: ${level.toUpperCase()} - ${levelDesc}
 
-Create a comprehensive TENSES LESSON for level ${level.toUpperCase()}.
+Create a comprehensive ${lang.name} TENSES / VERB FORMS LESSON for level ${level.toUpperCase()}.
 
 Pick 2-3 tenses appropriate for this level and for each tense provide:
 - Name (e.g. "Present Simple", "Past Perfect")
@@ -895,7 +947,7 @@ JSON format:
 }`;
 
     try {
-      const content = await callAI(systemPrompt, `Create tenses lesson for ${level.toUpperCase()} level.`, { maxTokens: 4000, temperature: 0.7, jsonMode: true });
+      const content = await callAI(systemPrompt, `Create ${lang.name} tenses lesson for ${level.toUpperCase()} level.`, { maxTokens: 4000, temperature: 0.7, jsonMode: true });
       let result = parseAIResponse(content);
 
       if (result && result.tenses) {
@@ -1058,11 +1110,13 @@ JSON format:
     const goBtn = document.getElementById('commandGoBtn');
     if (goBtn) { goBtn.disabled = true; goBtn.querySelector('span').textContent = 'Generating...'; }
 
-    const systemPrompt = `You are "English DBD Link Words", an expert English teacher. Output ONLY valid JSON.
+    const systemPrompt = `You are "Language DBD Link Words", an expert ${lang.teacherName}. Output ONLY valid JSON.
+
+Target language: ${lang.name} (${lang.nativeName})
 
 Level: ${level.toUpperCase()} - ${levelDesc}
 
-Create a LINKING WORDS / CONNECTORS lesson for level ${level.toUpperCase()}.
+Create a ${lang.name} LINKING WORDS / CONNECTORS lesson for level ${level.toUpperCase()}.
 
 Organize connectors into 4-6 categories:
 - Addition (and, also, furthermore...)
@@ -1073,7 +1127,7 @@ Organize connectors into 4-6 categories:
 - Condition (if, unless, provided that...)
 
 For each category provide:
-- Category name (English + Vietnamese)
+- Category name (${lang.name} + Vietnamese)
 - 4-6 connectors with meaning and example sentence
 - Level-appropriate complexity
 
@@ -1098,7 +1152,7 @@ JSON format:
 }`;
 
     try {
-      const content = await callAI(systemPrompt, `Create linking words lesson for ${level.toUpperCase()} level.`, { maxTokens: 4000, temperature: 0.7, jsonMode: true });
+      const content = await callAI(systemPrompt, `Create ${lang.name} linking words lesson for ${level.toUpperCase()} level.`, { maxTokens: 4000, temperature: 0.7, jsonMode: true });
       let result = parseAIResponse(content);
 
       if (result && result.categories) {
@@ -1282,7 +1336,7 @@ JSON format:
 
       <!-- Section Tabs -->
       <div class="dbd-tabs">
-        <button class="dbd-tab ${activeTab === 'english' ? 'active' : ''}" onclick="app.switchTab('english')">🇬🇧 English</button>
+        <button class="dbd-tab ${activeTab === 'english' ? 'active' : ''}" onclick="app.switchTab('english')">${getLanguage().tabLabel}</button>
         <button class="dbd-tab ${activeTab === 'practice' ? 'active' : ''}" onclick="app.switchTab('practice')">🇻🇳 Luyện dịch</button>
         <button class="dbd-tab ${activeTab === 'vocabulary' ? 'active' : ''}" onclick="app.switchTab('vocabulary')">📚 Từ vựng</button>
         <button class="dbd-tab ${activeTab === 'tenses' ? 'active' : ''}" onclick="app.switchTab('tenses')">⏰ Tenses</button>
@@ -1329,16 +1383,17 @@ JSON format:
 
     const dialogueText = (currentData.dialogue_en || []).map(d => d.text.replace(/\*\*/g, '')).join('\n');
     const level = currentData.level || 'B1';
+    const lang = getLanguage();
 
     let prompt = '';
     let jsonHint = '';
 
     if (tabName === 'vocabulary') {
-      prompt = `Analyze this ${level}-level English dialogue and extract 8-10 vocabulary words appropriate for ${level} learners. Include IPA pronunciation and Vietnamese meaning.\n\nDialogue:\n${dialogueText}`;
+      prompt = `Analyze this ${level}-level ${lang.name} dialogue and extract 8-10 vocabulary words appropriate for ${level} learners. Include pronunciation/IPA and Vietnamese meaning.\n\nDialogue:\n${dialogueText}`;
       jsonHint = '{"vocabulary":[{"word":"...","ipa":"...","meaning":"Vietnamese","example_en":"...","example_vi":"..."}]}';
     } else if (tabName === 'tenses') {
-      prompt = `Analyze this ${level}-level English dialogue. Extract 4-5 tenses used with examples from the dialogue. Provide 'usage' in English and 'usage_vi' in Vietnamese.\n\nDialogue:\n\n${dialogueText}`;
-      jsonHint = '{"tenses":[{"tense":"...","example":"from dialogue","example_vi":"...","usage":"English usage","usage_vi":"Vietnamese usage","structure":"...","explanation_vi":"..."}]}';
+      prompt = `Analyze this ${level}-level ${lang.name} dialogue. Extract 4-5 tenses or verb forms used with examples from the dialogue. Provide 'usage' in ${lang.name} and 'usage_vi' in Vietnamese.\n\nDialogue:\n\n${dialogueText}`;
+      jsonHint = '{"tenses":[{"tense":"...","example":"from dialogue","example_vi":"...","usage":"target language usage","usage_vi":"Vietnamese usage","structure":"...","explanation_vi":"..."}]}';
     } else if (tabName === 'grammar') {
       const toStructuresByLevel = {
         'A1': 'want to, need to, have to, like to, try to, go to',
@@ -1350,13 +1405,14 @@ JSON format:
         'B2': 'be used to, get used to, look forward to, object to, be accustomed to, resort to, be committed to',
       };
       const toHints = toStructuresByLevel[level] || toStructuresByLevel['B1'];
-      prompt = `Analyze this ${level}-level English dialogue. Extract 6-8 grammar patterns and 5-8 connectors used. Also extract 3-5 common grammar structures with "to" that are appropriate for ${level} learners (such as: ${toHints}). Include Vietnamese explanations.\n\nDialogue:\n${dialogueText}`;
+      const extraGrammar = targetLanguage === 'en' ? `Also extract 3-5 common grammar structures with "to" that are appropriate for ${level} learners (such as: ${toHints}).` : 'Also extract 3-5 common French verb/preposition structures appropriate for this level.';
+      prompt = `Analyze this ${level}-level ${lang.name} dialogue. Extract 6-8 grammar patterns and 5-8 connectors used. ${extraGrammar} Include Vietnamese explanations.\n\nDialogue:\n${dialogueText}`;
       jsonHint = '{"grammar":[{"type":"...","structure":"...","example_en":"...","example_vi":"...","explanation":"..."}],"connectors":[{"word":"...","type":"...","type_vi":"...","example":"from dialogue","example_vi":"...","explanation_vi":"..."}],"to_structures":[{"structure":"used to + V","meaning_vi":"đã từng...","example_en":"I used to play football.","example_vi":"Tôi đã từng chơi bóng đá.","explanation":"..."}]}';
     }
 
     try {
       const content = await callAI(
-        `You are an English teacher. Output ONLY valid JSON matching this format: ${jsonHint}. DO NOT include any emojis (like 💡, 📖, 🇻🇳) inside the JSON values. Ensure every field is filled with meaningful content extracted from the dialogue.`,
+        `You are a ${lang.teacherName}. Output ONLY valid JSON matching this format: ${jsonHint}. DO NOT include any emojis (like 💡, 📖, 🇻🇳) inside the JSON values. Ensure every field is filled with meaningful content extracted from the dialogue.`,
         prompt,
         { maxTokens: 4000, temperature: 0.7, jsonMode: true }
       );
@@ -1528,7 +1584,7 @@ JSON format:
                   <div class="practice-write-area" id="write-area-${i}" onclick="event.stopPropagation()">
                     <div class="practice-write-row">
                       <textarea class="practice-write-input" id="write-input-${i}" 
-                             placeholder="Viết lại bằng tiếng Anh..." rows="3"
+                              placeholder="${getLanguage().practiceAction}" rows="3"
                              autocomplete="off" spellcheck="false"
                              onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)) app.checkWriting(${i})"></textarea>
                       <button class="practice-write-check" onclick="app.checkWriting(${i})" title="Kiểm tra">→</button>
@@ -1732,7 +1788,8 @@ JSON format:
 
     // Browser voices
     const voices = speechSynthesis.getVoices();
-    const englishVoices = voices.filter(v => v.lang.startsWith('en'));
+    const lang = getLanguage();
+    const englishVoices = voices.filter(v => v.lang.toLowerCase().startsWith(lang.voicePrefix));
     const savedVoiceName = localStorage.getItem('selectedVoice');
 
     select.innerHTML = '';
@@ -1747,7 +1804,7 @@ JSON format:
     sorted.forEach((voice, i) => {
       const opt = document.createElement('option');
       opt.value = i;
-      const label = voice.name.replace('Microsoft ', '').replace(' Online (Natural)', ' ⭐').replace(' - English', '');
+      const label = voice.name.replace('Microsoft ', '').replace(' Online (Natural)', ' ⭐').replace(' - English', '').replace(' - French', '');
       opt.textContent = `${label} (${voice.lang})`;
       opt.dataset.voiceName = voice.name;
       opt.dataset.origIdx = englishVoices.indexOf(voice);
@@ -1813,7 +1870,8 @@ JSON format:
     }
 
     // Browser voice
-    const voices = speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
+    const lang = getLanguage();
+    const voices = speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith(lang.voicePrefix));
     // Sort same way as loadVoices
     const sorted = [...voices].sort((a, b) => {
       const aQ = (a.name.includes('Natural') || a.name.includes('Premium') || a.name.includes('Enhanced')) ? 0 : 1;
@@ -1856,6 +1914,17 @@ JSON format:
     }
 
     showToast(engine === 'elevenlabs' ? '🎙️ Đã chuyển sang ElevenLabs' : '🔊 Đã chuyển sang Browser voice');
+  }
+
+  function changeLanguage(language) {
+    targetLanguage = languageSettings[language] ? language : 'en';
+    localStorage.setItem('targetLanguage', targetLanguage);
+    stopAllSpeech();
+    selectedVoice = null;
+    lastSpokenText = '';
+    lastSpokenTime = 0;
+    loadVoices();
+    showToast(`${getLanguage().flag} Đã chuyển sang ${getLanguage().nativeName}`);
   }
 
   // --- ElevenLabs TTS ---
@@ -2009,7 +2078,7 @@ JSON format:
     if (!('speechSynthesis' in window)) { if (onEnd) onEnd(); return; }
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US';
+    utterance.lang = getLanguage().speechLang;
     utterance.rate = speechRate;
     utterance.pitch = 1;
     if (selectedVoice) utterance.voice = selectedVoice;
@@ -2051,7 +2120,7 @@ JSON format:
       if (!('speechSynthesis' in window)) { isSpeaking = false; updateStopButton(false); resolve(); return; }
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'en-US';
+      utterance.lang = getLanguage().speechLang;
       utterance.rate = speechRate;
       utterance.pitch = 1;
       if (selectedVoice) utterance.voice = selectedVoice;
@@ -2153,7 +2222,7 @@ JSON format:
     if (scoreDiv) scoreDiv.innerHTML = '<div class="dialogue-score" style="color:var(--text-muted)">🎧 Hãy đọc...</div>';
 
     const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
+    recognition.lang = getLanguage().speechLang;
     recognition.interimResults = false;
     recognition.continuous = false;
 
@@ -2298,7 +2367,7 @@ JSON format:
   function listenToUser(targetText) {
     return new Promise(resolve => {
       const recognition = new SpeechRecognition();
-      recognition.lang = 'en-US';
+      recognition.lang = getLanguage().speechLang;
       recognition.interimResults = false;
       recognition.continuous = false;
 
@@ -2458,7 +2527,7 @@ JSON format:
     try {
       const chatContext = chatHistory.map(m => `${m.role}: ${m.content}`).join('\n');
       const reply = await callAI(
-        'You are a friendly English tutor. Answer in a mix of English and Vietnamese to help the user learn. Be concise.',
+        `You are a friendly ${getLanguage().chatTutor}. Answer in a mix of ${getLanguage().name} and Vietnamese to help the user learn. Be concise.`,
         chatContext,
         { maxTokens: 1000, temperature: 0.7 }
       );
@@ -2528,7 +2597,7 @@ JSON format:
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
+    recognition.lang = getLanguage().speechLang;
     recognition.interimResults = false;
     recognition.maxAlternatives = 3;
 
@@ -2753,8 +2822,8 @@ JSON format:
       }
 
       const result = await callAI(
-        'You are an English-Vietnamese dictionary. Output ONLY JSON: {"trans":"Vietnamese meaning","ipa":"phonetic","usage":"1 short example sentence in VN"}',
-        `Translate this English word/phrase: "${text}"`,
+        `You are a ${getLanguage().dictionary}. Output ONLY JSON: {"trans":"Vietnamese meaning","ipa":"phonetic","usage":"1 short example sentence in Vietnamese"}`,
+        `${getLanguage().translateLabel}: "${text}"`,
         { maxTokens: 200, temperature: 0.3, jsonMode: true }
       );
 
@@ -2798,6 +2867,7 @@ JSON format:
     saveSettings,
     previewTheme,
     changeTTSEngine,
+    changeLanguage,
     stopAllSpeech,
     switchMode,
     switchNewsTab,
