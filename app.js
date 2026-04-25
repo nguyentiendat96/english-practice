@@ -1834,6 +1834,10 @@ JSON format:
   }
 
   function changeTTSEngine(engine) {
+    stopAllSpeech();
+    lastSpokenText = '';
+    lastSpokenTime = 0;
+
     ttsEngine = engine;
     localStorage.setItem('ttsEngine', engine);
     // Update voice list based on engine
@@ -1850,6 +1854,8 @@ JSON format:
       // Show browser voices
       loadVoices();
     }
+
+    showToast(engine === 'elevenlabs' ? '🎙️ Đã chuyển sang ElevenLabs' : '🔊 Đã chuyển sang Browser voice');
   }
 
   // --- ElevenLabs TTS ---
@@ -1969,7 +1975,7 @@ JSON format:
     // Mark the element as speaking
     if (speakEl) {
       speakEl.classList.add('speaking-active');
-      const btn = speakEl.querySelector('.inline-speak-btn');
+      const btn = speakEl.classList.contains('inline-speak-btn') ? speakEl : speakEl.querySelector('.inline-speak-btn');
       if (btn) { btn.textContent = '⏹'; btn.title = 'Dừng'; }
     }
 
@@ -1978,7 +1984,7 @@ JSON format:
       updateStopButton(false);
       if (speakEl) {
         speakEl.classList.remove('speaking-active');
-        const btn = speakEl.querySelector('.inline-speak-btn');
+        const btn = speakEl.classList.contains('inline-speak-btn') ? speakEl : speakEl.querySelector('.inline-speak-btn');
         if (btn) { btn.textContent = '🔊'; btn.title = 'Nghe'; }
       }
     };
