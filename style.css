@@ -2845,7 +2845,38 @@ select.settings-input {
   }
 }
 
-/* Inline Speak/Stop Button */
+/* ============================================
+   AUTH MODAL & USER MENU
+   ============================================ */
+.auth-modal { max-width: 400px; }
+.auth-tabs { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 1px solid var(--border-subtle); position: relative; }
+.auth-tab { flex: 1; padding: 10px; text-align: center; font-size: 14px; font-weight: 600; cursor: pointer; background: none; border: none; color: var(--text-muted); transition: all 0.2s; }
+.auth-tab.active { color: var(--text-primary); border-bottom: 2px solid var(--text-primary); }
+.auth-close { position: absolute; right: 0; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; padding: 4px 8px; }
+.auth-close:hover { color: var(--text-primary); }
+.auth-submit { width: 100%; margin-top: 12px; font-size: 15px; padding: 12px; }
+.auth-error { color: #ff453a; font-size: 13px; margin-top: 8px; min-height: 20px; }
+.auth-hint { color: var(--text-muted); font-size: 12px; margin-top: 12px; line-height: 1.5; text-align: center; }
+.auth-footer { margin-top: 16px; text-align: center; border-top: 1px solid var(--border-subtle); padding-top: 16px; }
+.auth-skip { background: none; border: none; color: var(--text-muted); font-size: 13px; cursor: pointer; }
+.auth-skip:hover { color: var(--text-primary); }
+
+.user-menu { position: relative; display: flex; align-items: center; }
+.user-login-btn { padding: 6px 14px; background: var(--bg-input); border: 1px solid var(--border-medium); border-radius: var(--radius-full); color: var(--text-primary); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+.user-login-btn:hover { background: var(--text-primary); color: var(--bg-primary); }
+.user-dropdown { display: flex; align-items: center; gap: 8px; padding: 4px 10px; background: var(--bg-input); border: 1px solid var(--border-medium); border-radius: var(--radius-full); }
+.user-email { font-size: 11px; color: var(--text-secondary); max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-logout-btn { background: none; border: none; color: var(--text-muted); font-size: 12px; cursor: pointer; padding: 2px 6px; }
+.user-logout-btn:hover { color: #ff453a; }
+
+.sync-badge { font-size: 14px; cursor: help; opacity: 0.5; transition: opacity 0.3s; }
+.sync-badge.synced { opacity: 1; }
+.sync-badge.syncing { opacity: 1; animation: sync-spin 1s linear infinite; }
+@keyframes sync-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ============================================
+   Inline Speak/Stop Button
+   ============================================ */
 .inline-speak-btn {
   position: absolute;
   right: 12px;

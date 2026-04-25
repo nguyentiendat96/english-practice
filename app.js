@@ -86,6 +86,13 @@
 
   function saveHistoryMeta() {
     try { localStorage.setItem('dbdHistoryMeta', JSON.stringify(historyMeta)); } catch(e) { /* quota */ }
+    // Push to cloud if logged in (debounced)
+    if (window.sync?.auth?.getUser()) {
+      clearTimeout(saveHistoryMeta._timer);
+      saveHistoryMeta._timer = setTimeout(() => {
+        window.sync?.push?.();
+      }, 3000);
+    }
   }
 
   function loadHistoryData(index) {
@@ -140,6 +147,18 @@
     });
     deferWork(() => {
       initSelectionTranslator();
+    });
+    // Init cloud sync + auth
+    deferWork(async () => {
+      await (window.sync?.init?.());
+      const user = window.sync?.auth?.getUser?.();
+      updateUserMenu(user);
+      if (user) {
+        updateSyncBadge(true);
+        // Reload history with cloud data
+        await initHistory();
+        renderHistory();
+      }
     });
   }
 
@@ -378,6 +397,9 @@
 
     document.getElementById('settingsModal')?.remove();
     showToast('✅ Đã lưu cài đặt!');
+    
+    // Push to cloud if logged in
+    window.sync?.pushSettings?.();
   }
 
   function previewTheme(theme) {
@@ -1426,9 +1448,12 @@ JSON format:
         if (parsed.connectors) currentData.connectors = parsed.connectors;
         if (parsed.to_structures) currentData.to_structures = parsed.to_structures;
 
-        // Update localStorage
+        // Update localStorage + cloud
         if (currentData._dataKey) {
           try { localStorage.setItem(currentData._dataKey, JSON.stringify(currentData)); } catch(e) {}
+          if (window.sync?.auth?.getUser()) {
+            window.sync?.push?.();
+          }
         }
 
         // Re-render
@@ -2466,9 +2491,13 @@ JSON format:
 
   function deleteHistory(index) {
     const removed = historyMeta.splice(index, 1);
-    // Also remove the data from localStorage
     if (removed[0] && removed[0].dataKey) {
       try { localStorage.removeItem(removed[0].dataKey); } catch(e) {}
+      // Also delete from cloud if it's a synced item
+      const cloudId = removed[0].cloudId || removed[0].dataKey?.replace('dbdData_', '');
+      if (removed[0].cloud && cloudId) {
+        window.sync?.delete?.(cloudId);
+      }
     }
     saveHistoryMeta();
     renderHistory();
@@ -2711,6 +2740,113 @@ JSON format:
     setTimeout(() => toast.classList.remove('show'), 2500);
   }
 
+  // ============================================
+  // AUTH & SYNC
+  // ============================================
+  function updateUserMenu(user) {
+    const loginBtn = document.getElementById('userLoginBtn');
+    const dropdown = document.getElementById('userDropdown');
+    const emailEl = document.getElementById('userEmail');
+    if (!loginBtn || !dropdown || !emailEl) return;
+    if (user) {
+      loginBtn.style.display = 'none';
+      dropdown.style.display = 'flex';
+      emailEl.textContent = user.email || 'user';
+    } else {
+      loginBtn.style.display = '';
+      dropdown.style.display = 'none';
+    }
+  }
+
+  function updateSyncBadge(synced) {
+    const badge = document.getElementById('syncBadge');
+    if (!badge) return;
+    if (synced) { badge.textContent = '☁️'; badge.className = 'sync-badge synced'; }
+    else { badge.textContent = '📡'; badge.className = 'sync-badge'; }
+  }
+
+  function showAuthModal() {
+    const modal = document.getElementById('authModal');
+    if (modal) modal.style.display = '';
+    document.getElementById('authEmail')?.focus();
+    document.getElementById('authError').textContent = '';
+  }
+
+  function closeAuthModal() {
+    const modal = document.getElementById('authModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function switchAuthTab(tab) {
+    const login = document.getElementById('authFormLogin');
+    const signup = document.getElementById('authFormSignup');
+    const t1 = document.getElementById('authTabLogin');
+    const t2 = document.getElementById('authTabSignup');
+    if (tab === 'login') {
+      login.style.display = ''; signup.style.display = 'none';
+      t1.classList.add('active'); t2.classList.remove('active');
+      document.getElementById('authEmail')?.focus();
+    } else {
+      login.style.display = 'none'; signup.style.display = '';
+      t1.classList.remove('active'); t2.classList.add('active');
+      document.getElementById('authEmail2')?.focus();
+    }
+    document.getElementById('authError').textContent = '';
+  }
+
+  async function authLogin() {
+    const email = document.getElementById('authEmail')?.value.trim();
+    const password = document.getElementById('authPassword')?.value;
+    const errEl = document.getElementById('authError');
+    if (!email || !password) { errEl.textContent = 'Vui lòng nhập email và mật khẩu'; return; }
+    errEl.textContent = '⏳ Đang đăng nhập...';
+    try {
+      const user = await window.sync.auth.signIn(email, password);
+      updateUserMenu(user);
+      updateSyncBadge(true);
+      closeAuthModal();
+      showToast('✅ Đã đăng nhập! Dữ liệu đã đồng bộ.');
+      // Reload history with cloud data
+      await initHistory();
+      renderHistory();
+    } catch (e) {
+      errEl.textContent = '❌ ' + (e.message || 'Đăng nhập thất bại');
+    }
+  }
+
+  async function authSignup() {
+    const email = document.getElementById('authEmail2')?.value.trim();
+    const password = document.getElementById('authPassword2')?.value;
+    const errEl = document.getElementById('authError');
+    if (!email || !password) { errEl.textContent = 'Vui lòng nhập email và mật khẩu'; return; }
+    if (password.length < 6) { errEl.textContent = 'Mật khẩu phải từ 6 ký tự'; return; }
+    errEl.textContent = '⏳ Đang đăng ký...';
+    try {
+      const result = await window.sync.auth.signUp(email, password);
+      closeAuthModal();
+      if (result?.user?.identities?.length === 0) {
+        showToast('📧 Email đã tồn tại. Vui lòng đăng nhập.');
+      } else if (result?.user) {
+        updateUserMenu(result.user);
+        updateSyncBadge(true);
+        showToast('✅ Đăng ký thành công! Dữ liệu đã đồng bộ.');
+        await initHistory();
+        renderHistory();
+      } else {
+        showToast('📧 Kiểm tra email để xác nhận đăng ký!');
+      }
+    } catch (e) {
+      errEl.textContent = '❌ ' + (e.message || 'Đăng ký thất bại');
+    }
+  }
+
+  async function logout() {
+    await window.sync?.auth?.signOut();
+    updateUserMenu(null);
+    updateSyncBadge(false);
+    showToast('👋 Đã đăng xuất');
+  }
+
   function timeAgo(timestamp) {
     const diff = Date.now() - timestamp;
     const mins = Math.floor(diff / 60000);
@@ -2859,6 +2995,12 @@ JSON format:
     loadHistory,
     deleteHistory,
     backToHome,
+    showAuthModal,
+    closeAuthModal,
+    switchAuthTab,
+    authLogin,
+    authSignup,
+    logout,
     changeVoice,
     changeSpeed,
     toggleChat,

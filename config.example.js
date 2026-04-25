@@ -12,4 +12,9 @@ window.CONFIG = {
   // ElevenLabs TTS (https://elevenlabs.io) - optional
   elevenlabsEndpoint: 'https://api.elevenlabs.io/v1/text-to-speech',
   elevenlabsKey: 'YOUR_ELEVENLABS_API_KEY',
+
+  // Supabase (https://supabase.com) - optional, lưu dữ liệu trên cloud
+  // Nếu không có, app dùng localStorage như cũ
+  supabaseUrl: 'https://your-project.supabase.co',
+  supabaseAnonKey: 'your-anon-key',
 };
