@@ -1,43 +1,52 @@
 /* ============================================
-   ENGLISH DBD - Design System
+   LANGUAGE DBD - NomadKit Design System
    ============================================ */
 
 :root {
-  /* Colors - Premium Cyber Monochromatic Dark */
-  --bg-primary: #08080a;
-  --bg-secondary: #0f0f14;
-  --bg-card: rgba(20, 20, 25, 0.7);
-  --bg-card-hover: rgba(30, 30, 38, 0.85);
-  --bg-elevated: #1a1a22;
-  --bg-input: rgba(10, 10, 15, 0.6);
+  /* Colors - NomadKit Dark (Warm Earth & Sand) */
+  --bg-primary: #1A1510;
+  --bg-secondary: #241E17;
+  --bg-card: rgba(42, 36, 28, 0.7);
+  --bg-card-hover: rgba(52, 44, 34, 0.85);
+  --bg-elevated: #342C22;
+  --bg-input: rgba(26, 21, 16, 0.6);
 
-  /* Accent colors - Monochromatic Grayscale with Cyber Glow */
-  --accent-primary: #ffffff;
-  --accent-secondary: #e2e2e7;
-  --accent-glow: rgba(255, 255, 255, 0.15);
-  /* New Gradient accents */
-  --gradient-primary: linear-gradient(135deg, #ffffff 0%, #a1a1a6 100%);
-  --gradient-dark: linear-gradient(135deg, #1a1a22 0%, #08080a 100%);
-  --gradient-glow: radial-gradient(circle at center, rgba(255,255,255,0.1) 0%, transparent 70%);
+  /* Accent - NomadKit Sand + Ocean */
+  --accent-primary: #D4A373;
+  --accent-secondary: #E0BA8C;
+  --accent-glow: rgba(212, 163, 115, 0.15);
+  --gradient-primary: linear-gradient(135deg, #D4A373 0%, #E0BA8C 100%);
+  --gradient-dark: linear-gradient(135deg, #342C22 0%, #1A1510 100%);
+  --gradient-glow: radial-gradient(circle at center, rgba(212,163,115,0.1) 0%, transparent 70%);
 
-  /* Text */
-  --text-primary: #f5f5f7;
-  --text-secondary: #a1a1a6;
-  --text-muted: #6e6e73;
-  --text-accent: #ffffff;
+  /* Semantic accents */
+  --accent-green: #166534;
+  --accent-green-glow: rgba(22, 101, 52, 0.15);
+  --accent-orange: #CA8A04;
+  --accent-red: #DC2626;
+  --accent-blue: #0891B2;
+  --accent-yellow: #CA8A04;
+  --accent-pink: #D4A373;
+  --accent-cyan: #0891B2;
 
-  /* Borders */
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-medium: rgba(255, 255, 255, 0.15);
-  --border-accent: rgba(255, 255, 255, 0.25);
+  /* Text - Warm tones */
+  --text-primary: #F5F0E8;
+  --text-secondary: #C4B5A5;
+  --text-muted: #8B7D6F;
+  --text-accent: #D4A373;
 
-  /* Shadows - Layered for depth */
+  /* Borders - Sand-tinted */
+  --border-subtle: rgba(212, 163, 115, 0.08);
+  --border-medium: rgba(212, 163, 115, 0.15);
+  --border-accent: rgba(212, 163, 115, 0.25);
+
+  /* Shadows */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.6);
   --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.8);
   --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 
-  /* Susing - Precision Sizing */
+  /* Sizing */
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 20px;
@@ -47,42 +56,42 @@
 }
 
 [data-theme="light"] {
-  /* Colors - Premium Monochromatic Light */
-  --bg-primary: #ffffff;
-  --bg-secondary: #f5f5f7;
-  --bg-card: #ffffff;
-  --bg-card-hover: #f1f1f1;
-  --bg-elevated: #e8e8e8;
-  --bg-input: #f5f5f7;
+  /* Colors - NomadKit Light (Warm Sand & Nature) */
+  --bg-primary: #FFFDF7;
+  --bg-secondary: #F5F0E8;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F5F0E8;
+  --bg-elevated: #EDE6D8;
+  --bg-input: #F5F0E8;
 
-  /* Accent colors - Monochromatic Grayscale */
-  --accent-primary: #000000;
-  --accent-secondary: #333333;
-  --accent-glow: rgba(0, 0, 0, 0.04);
-  --accent-green: #000000;
-  --accent-green-glow: rgba(0, 0, 0, 0.05);
-  --accent-orange: #f57c00;
-  --accent-red: #000000;
-  --accent-blue: #000000;
-  --accent-yellow: #222222;
-  --accent-pink: #000000;
-  --accent-cyan: #000000;
+  /* Accent - NomadKit Sand + Ocean + Forest */
+  --accent-primary: #D4A373;
+  --accent-secondary: #C19664;
+  --accent-glow: rgba(212, 163, 115, 0.15);
+  --accent-green: #166534;
+  --accent-green-glow: rgba(22, 101, 52, 0.1);
+  --accent-orange: #CA8A04;
+  --accent-red: #DC2626;
+  --accent-blue: #0891B2;
+  --accent-yellow: #CA8A04;
+  --accent-pink: #D4A373;
+  --accent-cyan: #0891B2;
 
-  /* Text */
-  --text-primary: #1d1d1f;
-  --text-secondary: #48484a;
-  --text-muted: #86868b;
-  --text-accent: #000000;
+  /* Text - Earthy dark tones */
+  --text-primary: #2D1B0E;
+  --text-secondary: #6B5344;
+  --text-muted: #9B8878;
+  --text-accent: #0891B2;
 
-  /* Borders */
-  --border-subtle: rgba(0, 0, 0, 0.08);
-  --border-medium: rgba(0, 0, 0, 0.12);
-  --border-accent: rgba(0, 0, 0, 0.18);
+  /* Borders - Warm subtle */
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-medium: rgba(0, 0, 0, 0.1);
+  --border-accent: rgba(212, 163, 115, 0.3);
 
-  /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.12);
+  /* Shadows - Lighter for light theme */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.1);
 }
 
 * {
@@ -1266,8 +1275,8 @@ button, a, select {
 }
 
 .practice-retry-btn:hover {
-  background: #7c6cf0;
-}
+      background: var(--accent-secondary);
+    }
 
 /* ============================================
    PRACTICE WRITING
@@ -2577,8 +2586,8 @@ select.settings-input {
 }
 
 .lesson-formula {
-  background: rgba(255, 180, 50, 0.12);
-  color: #ffb432;
+  background: rgba(212, 163, 115, 0.12);
+  color: var(--accent-primary);
   padding: 5px 14px;
   border-radius: var(--radius-full);
   font-size: 13px;
@@ -2623,8 +2632,8 @@ select.settings-input {
 
 .signal-tag {
   display: inline-block;
-  background: rgba(100, 200, 255, 0.1);
-  color: #64c8ff;
+  background: rgba(8, 145, 178, 0.1);
+  color: var(--accent-blue);
   padding: 3px 10px;
   border-radius: var(--radius-full);
   font-size: 12px;
