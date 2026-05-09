@@ -300,12 +300,12 @@
 
   // ElevenLabs voices
   const elevenLabsVoices = [
-    { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel (Nữ)' },
-    { id: 'pNInz6obpgDQGcFmaJgB', name: 'Adam (Nam)' },
-    { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Bella (Nữ)' },
-    { id: 'ErXwobaYiN019PkySvjV', name: 'Antoni (Nam)' },
-    { id: 'MF3mGyEYCl7XYWbV9V6O', name: 'Elli (Nữ)' },
-    { id: 'TxGEqnHWrfWFTfGW9XjX', name: 'Josh (Nam)' },
+    { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel (Nữ)', gender: 'FEMALE' },
+    { id: 'pNInz6obpgDQGcFmaJgB', name: 'Adam (Nam)', gender: 'MALE' },
+    { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Bella (Nữ)', gender: 'FEMALE' },
+    { id: 'ErXwobaYiN019PkySvjV', name: 'Antoni (Nam)', gender: 'MALE' },
+    { id: 'MF3mGyEYCl7XYWbV9V6O', name: 'Elli (Nữ)', gender: 'FEMALE' },
+    { id: 'TxGEqnHWrfWFTfGW9XjX', name: 'Josh (Nam)', gender: 'MALE' },
   ];
 
   // --- API Key Helpers ---
@@ -330,24 +330,24 @@
 
   // --- Google Cloud TTS voices ---
   const googleVoicesEN = [
-    { name: 'en-US-WaveNet-D', label: 'Guy (Nam) ⭐' },
-    { name: 'en-US-WaveNet-C', label: 'Aria (Nữ) ⭐' },
-    { name: 'en-US-WaveNet-A', label: 'Wavenet A (Nam)' },
-    { name: 'en-US-WaveNet-E', label: 'Wavenet E (Nữ)' },
-    { name: 'en-US-WaveNet-F', label: 'Wavenet F (Nữ)' },
-    { name: 'en-US-WaveNet-B', label: 'Wavenet B (Nam)' },
-    { name: 'en-US-Neural2-D', label: 'Neural2 D (Nam)' },
-    { name: 'en-US-Neural2-C', label: 'Neural2 C (Nữ)' },
-    { name: 'en-US-Neural2-A', label: 'Neural2 A (Nam)' },
-    { name: 'en-US-Neural2-F', label: 'Neural2 F (Nữ)' },
+    { name: 'en-US-WaveNet-D', label: 'Guy (Nam) ⭐', gender: 'MALE' },
+    { name: 'en-US-WaveNet-C', label: 'Aria (Nữ) ⭐', gender: 'FEMALE' },
+    { name: 'en-US-WaveNet-A', label: 'Wavenet A (Nam)', gender: 'MALE' },
+    { name: 'en-US-WaveNet-E', label: 'Wavenet E (Nữ)', gender: 'FEMALE' },
+    { name: 'en-US-WaveNet-F', label: 'Wavenet F (Nữ)', gender: 'FEMALE' },
+    { name: 'en-US-WaveNet-B', label: 'Wavenet B (Nam)', gender: 'MALE' },
+    { name: 'en-US-Neural2-D', label: 'Neural2 D (Nam)', gender: 'MALE' },
+    { name: 'en-US-Neural2-C', label: 'Neural2 C (Nữ)', gender: 'FEMALE' },
+    { name: 'en-US-Neural2-A', label: 'Neural2 A (Nam)', gender: 'MALE' },
+    { name: 'en-US-Neural2-F', label: 'Neural2 F (Nữ)', gender: 'FEMALE' },
   ];
   const googleVoicesFR = [
-    { name: 'fr-FR-WaveNet-C', label: 'WaveNet C (Nữ) ⭐' },
-    { name: 'fr-FR-WaveNet-D', label: 'WaveNet D (Nam) ⭐' },
-    { name: 'fr-FR-WaveNet-A', label: 'WaveNet A (Nữ)' },
-    { name: 'fr-FR-WaveNet-B', label: 'WaveNet B (Nam)' },
-    { name: 'fr-FR-Neural2-A', label: 'Neural2 A (Nữ)' },
-    { name: 'fr-FR-Neural2-B', label: 'Neural2 B (Nam)' },
+    { name: 'fr-FR-WaveNet-C', label: 'WaveNet C (Nữ) ⭐', gender: 'FEMALE' },
+    { name: 'fr-FR-WaveNet-D', label: 'WaveNet D (Nam) ⭐', gender: 'MALE' },
+    { name: 'fr-FR-WaveNet-A', label: 'WaveNet A (Nữ)', gender: 'FEMALE' },
+    { name: 'fr-FR-WaveNet-B', label: 'WaveNet B (Nam)', gender: 'MALE' },
+    { name: 'fr-FR-Neural2-A', label: 'Neural2 A (Nữ)', gender: 'FEMALE' },
+    { name: 'fr-FR-Neural2-B', label: 'Neural2 B (Nam)', gender: 'MALE' },
   ];
   function getGoogleVoices() {
     return targetLanguage === 'fr' ? googleVoicesFR : googleVoicesEN;
@@ -360,6 +360,45 @@
   }
   function setGoogleVoice(voiceName) {
     localStorage.setItem('google_tts_voice', voiceName);
+  }
+
+  // --- Multi-voice: pick a different voice for each dialogue speaker ---
+  function getVoiceForSpeaker(speaker) {
+    if (!speaker) return null;
+    const selected = getGoogleVoice();
+    const selectedObj = getGoogleVoices().find(v => v.name === selected);
+    if (!selectedObj) return null;
+    // Speaker A uses the selected voice, Speaker B uses opposite gender
+    const isA = (speaker === 'A');
+    if (isA) return selected;
+    // Find a voice with opposite gender from the same list
+    const targetGender = selectedObj.gender === 'MALE' ? 'FEMALE' : 'MALE';
+    const alt = getGoogleVoices().find(v => v.gender === targetGender && v.name !== selected);
+    return alt ? alt.name : selected;
+  }
+
+  function getElevenLabsVoiceForSpeaker(speaker) {
+    if (!speaker) return null;
+    const selected = getElevenLabsVoice();
+    const selectedObj = elevenLabsVoices.find(v => v.id === selected);
+    if (!selectedObj) return null;
+    const isA = (speaker === 'A');
+    if (isA) return selected;
+    const targetGender = selectedObj.gender === 'MALE' ? 'FEMALE' : 'MALE';
+    const alt = elevenLabsVoices.find(v => v.gender === targetGender && v.id !== selected);
+    return alt ? alt.id : selected;
+  }
+
+  function getBrowserVoiceForSpeaker(speaker) {
+    if (!speaker || !selectedVoice) return selectedVoice;
+    if (speaker === 'A') return selectedVoice;
+    // Try to find a voice with different name characteristic
+    const lang = getLanguage();
+    const voices = speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith(lang.voicePrefix));
+    if (voices.length < 2) return selectedVoice;
+    // Pick a different voice from the list
+    const alt = voices.find(v => v.name !== selectedVoice.name);
+    return alt || selectedVoice;
   }
 
   // --- core request handler ---
@@ -1604,8 +1643,8 @@ JSON format:
       const viText = viLines[i] ? (viLines[i].text || '').replace(/\*\*/g, '') : '';
       const analysis = findAnalysisFast(cleanEn, analysisMap);
 
-      turnChunks[i] = `<div class="dialogue-turn ${speakerClass} clickable-row" id="turn-${i}" data-en="${escapeAttr(cleanEn)}" onclick="app.toggleVi(${i})">
-                <div class="dialogue-avatar inline-speak-btn" onclick="app.speak('${escapeQuotes(cleanEn)}', this); event.stopPropagation();" title="Nghe">🔊</div>
+      turnChunks[i] = `<div class="dialogue-turn ${speakerClass} clickable-row" id="turn-${i}" data-en="${escapeAttr(cleanEn)}" data-speaker="${line.speaker || 'A'}" onclick="app.toggleVi(${i})">
+                <div class="dialogue-avatar inline-speak-btn" onclick="app.speak('${escapeQuotes(cleanEn)}', this, '${line.speaker || \'A\'}'); event.stopPropagation();" title="Nghe">🔊</div>
                 <div class="dialogue-content">
                   <div class="dialogue-name">${speakerName}</div>
                   <div class="dialogue-en">${displayEn}</div>
@@ -1652,8 +1691,8 @@ JSON format:
       const speakerName = viLine.name || viLine.speaker || 'Speaker';
 
       return `
-              <div class="dialogue-turn ${speakerClass} clickable-row" id="turn-${i}" data-en="${escapeAttr(enText)}" onclick="app.revealEnglish(${i})">
-                <div class="dialogue-avatar inline-speak-btn" onclick="app.speak('${escapeQuotes(enText)}', this); event.stopPropagation();" title="Nghe">🔊</div>
+              <div class="dialogue-turn ${speakerClass} clickable-row" id="turn-${i}" data-en="${escapeAttr(enText)}" data-speaker="${viLine.speaker || 'A'}" onclick="app.revealEnglish(${i})">
+                <div class="dialogue-avatar inline-speak-btn" onclick="app.speak('${escapeQuotes(enText)}', this, '${viLine.speaker || \'A\'}'); event.stopPropagation();" title="Nghe">🔊</div>
                 <div class="dialogue-content">
                   <div class="dialogue-name">${speakerName}</div>
                   <div class="dialogue-vi" style="display:block;font-style:normal;">${viText}</div>
@@ -2062,9 +2101,9 @@ JSON format:
   const audioCache = new Map(); // cacheKey -> AudioBuffer
   let _currentSource = null;
 
-  async function elevenLabsFetch(text) {
+  async function elevenLabsFetch(text, overrideVoiceId) {
     const key = getElevenLabsKey();
-    const voiceId = getElevenLabsVoice();
+    const voiceId = overrideVoiceId || getElevenLabsVoice();
     if (!key) return null;
 
     const cacheKey = `${voiceId}_${text}`;
@@ -2112,11 +2151,11 @@ JSON format:
   }
 
   // --- Google Cloud TTS (REST API, AudioContext-based) ---
-  async function googleTtsFetch(text) {
+  async function googleTtsFetch(text, overrideVoice) {
     const key = getGoogleTtsKey();
     if (!key) return null;
 
-    const voiceName = getGoogleVoice();
+    const voiceName = overrideVoice || getGoogleVoice();
     const langCode = voiceName.substring(0, 5); // e.g. 'en-US' or 'fr-FR'
     const cacheKey = `g_${voiceName}_${speechRate}_${text}`;
     if (audioCache.has(cacheKey)) return audioCache.get(cacheKey);
@@ -2197,7 +2236,7 @@ JSON format:
     return false;
   }
 
-  function speak(text, speakEl) {
+  function speak(text, speakEl, speaker) {
     if (!text) return;
     if (speakEl && speakEl.classList.contains('speaking-active')) { stopAllSpeech(); return; }
     if (isDuplicate(text)) return;
@@ -2222,27 +2261,30 @@ JSON format:
     };
 
     if (ttsEngine === 'elevenlabs' && getElevenLabsKey()) {
-      elevenLabsFetch(text).then(buffer => {
+      const elVoice = speaker ? getElevenLabsVoiceForSpeaker(speaker) : undefined;
+      elevenLabsFetch(text, elVoice).then(buffer => {
         if (buffer && playAudioBuffer(buffer, onEnd)) return;
-        browserSpeakWithCallback(text, onEnd);
+        browserSpeakWithCallback(text, onEnd, speaker);
       });
     } else if (ttsEngine === 'google' && getGoogleTtsKey()) {
-      googleTtsFetch(text).then(buffer => {
+      const gVoice = speaker ? getVoiceForSpeaker(speaker) : undefined;
+      googleTtsFetch(text, gVoice).then(buffer => {
         if (buffer && playAudioBuffer(buffer, onEnd)) return;
-        browserSpeakWithCallback(text, onEnd);
+        browserSpeakWithCallback(text, onEnd, speaker);
       });
     } else {
-      browserSpeakWithCallback(text, onEnd);
+      browserSpeakWithCallback(text, onEnd, speaker);
     }
   }
 
-  function browserSpeakWithCallback(text, onEnd) {
+  function browserSpeakWithCallback(text, onEnd, speaker) {
     if (!('speechSynthesis' in window)) { if (onEnd) onEnd(); return; }
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = getLanguage().speechLang;
     utterance.rate = speechRate; utterance.pitch = 1;
-    if (selectedVoice) utterance.voice = selectedVoice;
+    const voiceToUse = speaker ? getBrowserVoiceForSpeaker(speaker) : selectedVoice;
+    if (voiceToUse) utterance.voice = voiceToUse;
     utterance.onend = onEnd;
     utterance.onerror = onEnd;
     window.speechSynthesis.speak(utterance);
@@ -2252,43 +2294,46 @@ JSON format:
     browserSpeakWithCallback(text, () => { isSpeaking = false; updateStopButton(false); });
   }
 
-  function speakAndWait(text) {
+  function speakAndWait(text, speaker) {
     if (!text) return Promise.resolve();
     stopAllSpeech();
     isSpeaking = true;
     updateStopButton(true);
 
     if (ttsEngine === 'elevenlabs' && getElevenLabsKey()) {
-      return elevenLabsFetch(text).then(buffer => {
+      const elVoice = speaker ? getElevenLabsVoiceForSpeaker(speaker) : undefined;
+      return elevenLabsFetch(text, elVoice).then(buffer => {
         if (buffer) {
           return new Promise(resolve => {
             playAudioBuffer(buffer, () => { isSpeaking = false; updateStopButton(false); setTimeout(resolve, 400); });
           });
         }
-        return browserSpeakAndWait(text);
+        return browserSpeakAndWait(text, speaker);
       });
     }
     if (ttsEngine === 'google' && getGoogleTtsKey()) {
-      return googleTtsFetch(text).then(buffer => {
+      const gVoice = speaker ? getVoiceForSpeaker(speaker) : undefined;
+      return googleTtsFetch(text, gVoice).then(buffer => {
         if (buffer) {
           return new Promise(resolve => {
             playAudioBuffer(buffer, () => { isSpeaking = false; updateStopButton(false); setTimeout(resolve, 400); });
           });
         }
-        return browserSpeakAndWait(text);
+        return browserSpeakAndWait(text, speaker);
       });
     }
-    return browserSpeakAndWait(text);
+    return browserSpeakAndWait(text, speaker);
   }
 
-  function browserSpeakAndWait(text) {
+  function browserSpeakAndWait(text, speaker) {
     return new Promise(resolve => {
       if (!('speechSynthesis' in window)) { isSpeaking = false; updateStopButton(false); resolve(); return; }
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = getLanguage().speechLang;
       utterance.rate = speechRate; utterance.pitch = 1;
-      if (selectedVoice) utterance.voice = selectedVoice;
+      const voiceToUse = speaker ? getBrowserVoiceForSpeaker(speaker) : selectedVoice;
+      if (voiceToUse) utterance.voice = voiceToUse;
       utterance.onend = () => { isSpeaking = false; updateStopButton(false); setTimeout(resolve, 400); };
       utterance.onerror = () => { isSpeaking = false; updateStopButton(false); resolve(); };
       window.speechSynthesis.speak(utterance);
@@ -2323,7 +2368,8 @@ JSON format:
       turn.classList.add('playing');
       turn.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-      await speakAndWait(text);
+      const speaker = turn.getAttribute('data-speaker') || 'A';
+      await speakAndWait(text, speaker);
     }
 
     turns.forEach(t => t.classList.remove('playing'));
