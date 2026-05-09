@@ -10,6 +10,8 @@ const config = {
   cerebrasEngine: process.env.CEREBRAS_ENGINE || 'qwen-3-235b-a22b-instruct-2507',
   elevenlabsEndpoint: process.env.ELEVENLABS_ENDPOINT || 'https://api.elevenlabs.io/v1/text-to-speech',
   elevenlabsKey: process.env.ELEVENLABS_KEY || '',
+  googleTtsEndpoint: process.env.GOOGLE_TTS_ENDPOINT || 'https://texttospeech.googleapis.com/v1/text:synthesize',
+  googleTtsKey: process.env.GOOGLE_TTS_KEY || '',
   supabaseUrl: process.env.SUPABASE_URL || '',
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY || '',
 };

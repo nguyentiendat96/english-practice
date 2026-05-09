@@ -107,7 +107,7 @@
   // Speech
   let selectedVoice = null;
   let speechRate = parseFloat(localStorage.getItem('speechRate') || '0.85');
-  let ttsEngine = localStorage.getItem('ttsEngine') || 'browser'; // 'browser' or 'elevenlabs'
+  let ttsEngine = localStorage.getItem('ttsEngine') || 'browser'; // 'browser', 'elevenlabs', or 'google'
   let recognizing = false;
 
   // Practice
@@ -280,6 +280,7 @@
   const _cfgToken = (window.CONFIG && window.CONFIG.cerebrasToken) || '';
   const _cfgEngine = (window.CONFIG && window.CONFIG.cerebrasEngine) || 'qwen-3-235b-a22b-instruct-2507';
   const _ttsEndpoint = (window.CONFIG && window.CONFIG.elevenlabsEndpoint) || 'https://api.elevenlabs.io/v1/text-to-speech';
+  const _googleTtsEndpoint = (window.CONFIG && window.CONFIG.googleTtsEndpoint) || 'https://texttospeech.googleapis.com/v1/text:synthesize';
 
   // ElevenLabs voices
   const elevenLabsVoices = [
@@ -309,6 +310,40 @@
   }
   function setAIKey(key) {
     // No-op or keep for override
+  }
+
+  // --- Google Cloud TTS voices ---
+  const googleVoicesEN = [
+    { name: 'en-US-WaveNet-D', label: 'Guy (Nam) ⭐' },
+    { name: 'en-US-WaveNet-C', label: 'Aria (Nữ) ⭐' },
+    { name: 'en-US-WaveNet-A', label: 'Wavenet A (Nam)' },
+    { name: 'en-US-WaveNet-E', label: 'Wavenet E (Nữ)' },
+    { name: 'en-US-WaveNet-F', label: 'Wavenet F (Nữ)' },
+    { name: 'en-US-WaveNet-B', label: 'Wavenet B (Nam)' },
+    { name: 'en-US-Neural2-D', label: 'Neural2 D (Nam)' },
+    { name: 'en-US-Neural2-C', label: 'Neural2 C (Nữ)' },
+    { name: 'en-US-Neural2-A', label: 'Neural2 A (Nam)' },
+    { name: 'en-US-Neural2-F', label: 'Neural2 F (Nữ)' },
+  ];
+  const googleVoicesFR = [
+    { name: 'fr-FR-WaveNet-C', label: 'WaveNet C (Nữ) ⭐' },
+    { name: 'fr-FR-WaveNet-D', label: 'WaveNet D (Nam) ⭐' },
+    { name: 'fr-FR-WaveNet-A', label: 'WaveNet A (Nữ)' },
+    { name: 'fr-FR-WaveNet-B', label: 'WaveNet B (Nam)' },
+    { name: 'fr-FR-Neural2-A', label: 'Neural2 A (Nữ)' },
+    { name: 'fr-FR-Neural2-B', label: 'Neural2 B (Nam)' },
+  ];
+  function getGoogleVoices() {
+    return targetLanguage === 'fr' ? googleVoicesFR : googleVoicesEN;
+  }
+  function getGoogleTtsKey() {
+    return (window.CONFIG && window.CONFIG.googleTtsKey) || '';
+  }
+  function getGoogleVoice() {
+    return localStorage.getItem('google_tts_voice') || getGoogleVoices()[0].name;
+  }
+  function setGoogleVoice(voiceName) {
+    localStorage.setItem('google_tts_voice', voiceName);
   }
 
   // --- core request handler ---
@@ -1811,6 +1846,18 @@ JSON format:
       return;
     }
 
+    // If Google engine is selected, show Google voices
+    if (ttsEngine === 'google') {
+      const gVoices = getGoogleVoices();
+      const savedGV = getGoogleVoice();
+      select.innerHTML = gVoices.map(v =>
+        `<option value="${v.name}" ${v.name === savedGV ? 'selected' : ''}>${v.label}</option>`
+      ).join('');
+      const speedSlider = document.getElementById('voiceSpeed');
+      if (speedSlider) speedSlider.value = speechRate;
+      return;
+    }
+
     // Browser voices
     const voices = speechSynthesis.getVoices();
     const lang = getLanguage();
@@ -1849,6 +1896,8 @@ JSON format:
     // Update TTS status
     if (ttsEngine === 'elevenlabs') {
       updateTTSStatus('ready', '🎙️ ElevenLabs');
+    } else if (ttsEngine === 'google') {
+      updateTTSStatus('ready', '☁️ Google TTS');
     } else {
       const count = select.options.length;
       if (count > 0) {
@@ -1894,6 +1943,13 @@ JSON format:
       return;
     }
 
+    if (ttsEngine === 'google') {
+      // Google voice selected
+      setGoogleVoice(select.value);
+      speak('Hello!');
+      return;
+    }
+
     // Browser voice
     const lang = getLanguage();
     const voices = speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith(lang.voicePrefix));
@@ -1933,12 +1989,27 @@ JSON format:
         ).join('');
       }
       updateTTSStatus('ready', '🎙️ ElevenLabs');
+    } else if (engine === 'google') {
+      // Show Google voices
+      if (voiceSelect) {
+        const gVoices = getGoogleVoices();
+        const savedGV = getGoogleVoice();
+        voiceSelect.innerHTML = gVoices.map(v =>
+          `<option value="${v.name}" ${v.name === savedGV ? 'selected' : ''}>${v.label}</option>`
+        ).join('');
+      }
+      updateTTSStatus('ready', '☁️ Google TTS');
     } else {
       // Show browser voices
       loadVoices();
     }
 
-    showToast(engine === 'elevenlabs' ? '🎙️ Đã chuyển sang ElevenLabs' : '🔊 Đã chuyển sang Browser voice');
+    const toastMap = {
+      elevenlabs: '🎙️ Đã chuyển sang ElevenLabs',
+      google: '☁️ Đã chuyển sang Google Cloud TTS',
+      browser: '🔊 Đã chuyển sang Browser voice',
+    };
+    showToast(toastMap[engine] || '🔊 Đã chuyển TTS engine');
   }
 
   function changeLanguage(language) {
@@ -2018,6 +2089,54 @@ JSON format:
     }
   }
 
+  // --- Google Cloud TTS (REST API, AudioContext-based) ---
+  async function googleTtsFetch(text) {
+    const key = getGoogleTtsKey();
+    if (!key) return null;
+
+    const voiceName = getGoogleVoice();
+    const langCode = voiceName.substring(0, 5); // e.g. 'en-US' or 'fr-FR'
+    const cacheKey = `g_${voiceName}_${speechRate}_${text}`;
+    if (audioCache.has(cacheKey)) return audioCache.get(cacheKey);
+
+    try {
+      const response = await fetch(`${_googleTtsEndpoint}?key=${key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          input: { text: text },
+          voice: { languageCode: langCode, name: voiceName },
+          audioConfig: {
+            audioEncoding: 'MP3',
+            speakingRate: speechRate,
+            pitch: 0,
+          },
+        }),
+      });
+      if (!response.ok) {
+        console.error('[Google TTS] Error:', response.status);
+        return null;
+      }
+
+      const data = await response.json();
+      if (!data.audioContent) return null;
+
+      // Decode base64 to ArrayBuffer
+      await ensureAudioCtx();
+      const binaryString = atob(data.audioContent);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const audioBuffer = await _audioCtx.decodeAudioData(bytes.buffer);
+      audioCache.set(cacheKey, audioBuffer);
+      return audioBuffer;
+    } catch (e) {
+      console.error('[Google TTS] Fetch error:', e);
+      return null;
+    }
+  }
+
   // Anti-duplicate: track what's currently being spoken
   let isSpeaking = false;
   let lastSpokenText = '';
@@ -2085,6 +2204,11 @@ JSON format:
         if (buffer && playAudioBuffer(buffer, onEnd)) return;
         browserSpeakWithCallback(text, onEnd);
       });
+    } else if (ttsEngine === 'google' && getGoogleTtsKey()) {
+      googleTtsFetch(text).then(buffer => {
+        if (buffer && playAudioBuffer(buffer, onEnd)) return;
+        browserSpeakWithCallback(text, onEnd);
+      });
     } else {
       browserSpeakWithCallback(text, onEnd);
     }
@@ -2114,6 +2238,16 @@ JSON format:
 
     if (ttsEngine === 'elevenlabs' && getElevenLabsKey()) {
       return elevenLabsFetch(text).then(buffer => {
+        if (buffer) {
+          return new Promise(resolve => {
+            playAudioBuffer(buffer, () => { isSpeaking = false; updateStopButton(false); setTimeout(resolve, 400); });
+          });
+        }
+        return browserSpeakAndWait(text);
+      });
+    }
+    if (ttsEngine === 'google' && getGoogleTtsKey()) {
+      return googleTtsFetch(text).then(buffer => {
         if (buffer) {
           return new Promise(resolve => {
             playAudioBuffer(buffer, () => { isSpeaking = false; updateStopButton(false); setTimeout(resolve, 400); });
