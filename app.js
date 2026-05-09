@@ -1644,7 +1644,7 @@ JSON format:
       const analysis = findAnalysisFast(cleanEn, analysisMap);
 
       turnChunks[i] = `<div class="dialogue-turn ${speakerClass} clickable-row" id="turn-${i}" data-en="${escapeAttr(cleanEn)}" data-speaker="${line.speaker || 'A'}" onclick="app.toggleVi(${i})">
-                <div class="dialogue-avatar inline-speak-btn" onclick="app.speak('${escapeQuotes(cleanEn)}', this, '${line.speaker || \'A\'}'); event.stopPropagation();" title="Nghe">🔊</div>
+                <div class="dialogue-avatar inline-speak-btn" onclick="app.speak('${escapeQuotes(cleanEn)}', this, '${line.speaker || "A"}'); event.stopPropagation();" title="Nghe">🔊</div>
                 <div class="dialogue-content">
                   <div class="dialogue-name">${speakerName}</div>
                   <div class="dialogue-en">${displayEn}</div>
@@ -1692,7 +1692,7 @@ JSON format:
 
       return `
               <div class="dialogue-turn ${speakerClass} clickable-row" id="turn-${i}" data-en="${escapeAttr(enText)}" data-speaker="${viLine.speaker || 'A'}" onclick="app.revealEnglish(${i})">
-                <div class="dialogue-avatar inline-speak-btn" onclick="app.speak('${escapeQuotes(enText)}', this, '${viLine.speaker || \'A\'}'); event.stopPropagation();" title="Nghe">🔊</div>
+                <div class="dialogue-avatar inline-speak-btn" onclick="app.speak('${escapeQuotes(enText)}', this, '${viLine.speaker || "A"}'); event.stopPropagation();" title="Nghe">🔊</div>
                 <div class="dialogue-content">
                   <div class="dialogue-name">${speakerName}</div>
                   <div class="dialogue-vi" style="display:block;font-style:normal;">${viText}</div>
