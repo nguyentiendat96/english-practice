@@ -1938,6 +1938,7 @@ JSON format:
 
     if (ttsEngine === 'elevenlabs') {
       // ElevenLabs voice selected
+      stopAllSpeech();
       setElevenLabsVoice(select.value);
       speak('Hello!');
       return;
@@ -1945,6 +1946,7 @@ JSON format:
 
     if (ttsEngine === 'google') {
       // Google voice selected
+      stopAllSpeech();
       setGoogleVoice(select.value);
       speak('Hello!');
       return;
@@ -1961,6 +1963,7 @@ JSON format:
     });
     const idx = parseInt(select.value);
     if (sorted[idx]) {
+      stopAllSpeech();
       selectedVoice = sorted[idx];
       localStorage.setItem('selectedVoice', selectedVoice.name);
       speak('Hello!');
@@ -1968,8 +1971,10 @@ JSON format:
   }
 
   function changeSpeed(val) {
+    stopAllSpeech();
     speechRate = parseFloat(val);
     localStorage.setItem('speechRate', speechRate);
+    audioCache.clear(); // Clear cache because speed affects audio
   }
 
   function changeTTSEngine(engine) {
@@ -1979,6 +1984,7 @@ JSON format:
 
     ttsEngine = engine;
     localStorage.setItem('ttsEngine', engine);
+    audioCache.clear(); // Clear cache when switching engine
     // Update voice list based on engine
     const voiceSelect = document.getElementById('voiceSelect');
     if (engine === 'elevenlabs') {
