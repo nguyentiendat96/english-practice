@@ -57,6 +57,22 @@
     const newMeta = localStorage.getItem('dbdHistoryMeta');
     if (newMeta) {
       try { historyMeta = JSON.parse(newMeta); } catch(e) { historyMeta = []; }
+      // Deduplicate: keep first (most recent) of each command+title+level
+      const seen = new Set();
+      const deduped = [];
+      for (const item of historyMeta) {
+        const fp = (item.command || '') + '|' + (item.title || '') + '|' + (item.level || '');
+        if (seen.has(fp)) {
+          if (item.dataKey) try { localStorage.removeItem(item.dataKey); } catch(e) {}
+          continue;
+        }
+        seen.add(fp);
+        deduped.push(item);
+      }
+      if (deduped.length < historyMeta.length) {
+        historyMeta = deduped;
+        saveHistoryMeta();
+      }
       return;
     }
     // Migrate old format: 'dbdHistory' had full data embedded

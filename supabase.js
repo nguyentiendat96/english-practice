@@ -109,11 +109,14 @@
   }
 
   async function insertLesson(data) {
-    if (!_user || !READY) return;
-    await fetch(API_URL + '/lessons', {
-      method: 'POST', headers: { ...headers(), 'Prefer': 'return=minimal' },
+    if (!_user || !READY) return null;
+    const res = await fetch(API_URL + '/lessons', {
+      method: 'POST', headers: { ...headers(), 'Prefer': 'return=representation' },
       body: JSON.stringify({ user_id: _user.id, ...data })
     });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return rows?.[0]?.id || null;
   }
 
   async function deleteLesson(id) {
@@ -154,12 +157,14 @@
         if (item.cloud) continue;
         const dataRaw = localStorage.getItem(item.dataKey);
         if (!dataRaw) continue;
-        await insertLesson({
+        const cloudId = await insertLesson({
           type: item.type || 'dialogue', command: item.command || '',
           title: item.title || 'Untitled', level: item.level || '',
           topic: item.topic || '', data: JSON.parse(dataRaw),
         });
-        item.cloud = true; count++;
+        item.cloud = true;
+        if (cloudId) item.cloudId = cloudId;
+        count++;
       }
       if (count) localStorage.setItem('dbdHistoryMeta', JSON.stringify(history));
     } catch {}
@@ -173,10 +178,21 @@
       if (!cloud?.length) return 0;
       const raw = localStorage.getItem('dbdHistoryMeta');
       let local = raw ? JSON.parse(raw) : [];
-      const localKeys = new Set(local.filter(h => h.cloudId).map(h => h.cloudId));
+      // Build set of cloud IDs already in local
+      const localCloudIds = new Set(local.filter(h => h.cloudId).map(h => h.cloudId));
+      // Also build a fingerprint set for local items without cloudId (to avoid duplicates)
+      const localFingerprints = new Set(local.map(h => `${h.command}|${h.title}|${h.level}`));
       let added = 0;
       for (const c of cloud) {
-        if (localKeys.has(c.id)) continue;
+        if (localCloudIds.has(c.id)) continue;
+        // Check if this lesson already exists locally (pushed but cloudId not saved)
+        const fp = `${c.command || ''}|${c.title || 'Untitled'}|${c.level || ''}`;
+        if (localFingerprints.has(fp)) {
+          // Mark existing local item with cloudId to prevent future duplicates
+          const existing = local.find(h => !h.cloudId && `${h.command}|${h.title}|${h.level}` === fp);
+          if (existing) { existing.cloud = true; existing.cloudId = c.id; }
+          continue;
+        }
         const data = await getLessonData(c.id);
         if (!data) continue;
         const dataKey = 'dbdData_' + c.id;
@@ -188,13 +204,13 @@
           dataKey, type: c.type || 'dialogue',
           cloud: true, cloudId: c.id,
         });
+        localFingerprints.add(fp);
         added++;
       }
-      if (added) {
-        local.sort((a, b) => b.timestamp - a.timestamp);
-        if (local.length > 200) local.length = 200;
-        localStorage.setItem('dbdHistoryMeta', JSON.stringify(local));
-      }
+      // Always save to update cloudIds on existing items
+      local.sort((a, b) => b.timestamp - a.timestamp);
+      if (local.length > 200) local.length = 200;
+      localStorage.setItem('dbdHistoryMeta', JSON.stringify(local));
       return added;
     } catch { return 0; }
   }
