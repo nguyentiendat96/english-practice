@@ -2156,6 +2156,112 @@ JSON format:
     };
     showToast(toastMap[engine] || '🔊 Đã chuyển TTS engine');
     updateSpeakerVoiceConfig();
+
+    // Validate API connection for non-browser engines
+    if (engine !== 'browser') {
+      validateTTSEngine(engine);
+    }
+  }
+
+  async function validateTTSEngine(engine) {
+    const engineLabel = engine === 'elevenlabs' ? 'ElevenLabs' : 'MiniMax HD';
+    const statusEmoji = engine === 'elevenlabs' ? '🎙️' : '🔮';
+
+    // Step 1: Check key
+    const key = engine === 'elevenlabs' ? getElevenLabsKey() : getMinimaxKey();
+    if (!key) {
+      updateTTSStatus('error', `❌ Thiếu API Key`);
+      showToast(`❌ Chưa cấu hình ${engineLabel} API Key. Vào Settings để nhập key.`, 'error');
+      // Revert to browser
+      revertToBrowser();
+      return;
+    }
+
+    // Step 2: Test API call
+    updateTTSStatus('loading', `⏳ Đang kiểm tra ${engineLabel}...`);
+
+    try {
+      let testOk = false;
+      let errorMsg = '';
+
+      if (engine === 'elevenlabs') {
+        const voiceId = getElevenLabsVoice();
+        const response = await fetch(`${_ttsEndpoint}/${voiceId}`, {
+          method: 'POST',
+          headers: { 'xi-api-key': key, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: 'Hi',
+            model_id: 'eleven_multilingual_v2',
+            voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+          }),
+        });
+        if (response.ok) {
+          testOk = true;
+        } else if (response.status === 401) {
+          errorMsg = 'API Key không hợp lệ';
+        } else if (response.status === 429) {
+          errorMsg = 'Hết quota hoặc rate limit';
+        } else {
+          errorMsg = `Lỗi server (${response.status})`;
+        }
+      } else {
+        // MiniMax
+        const url = `${_minimaxEndpoint}?GroupId=${_minimaxGroupId}`;
+        const voiceId = getMinimaxVoice();
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'speech-02-hd',
+            text: 'Hi',
+            voice_setting: { voice_id: voiceId, speed: 1.0, pitch: 0, emotion: 'neutral' },
+            audio_format: 'mp3',
+          }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.base_resp && data.base_resp.status_code !== 0) {
+            errorMsg = data.base_resp.status_msg || 'API trả lỗi';
+          } else if (data.data && data.data.audio) {
+            testOk = true;
+          } else {
+            errorMsg = 'Không nhận được audio';
+          }
+        } else if (response.status === 401 || response.status === 403) {
+          errorMsg = 'API Key không hợp lệ';
+        } else if (response.status === 429) {
+          errorMsg = 'Hết quota hoặc rate limit';
+        } else {
+          errorMsg = `Lỗi server (${response.status})`;
+        }
+      }
+
+      if (testOk) {
+        updateTTSStatus('ready', `${statusEmoji} ${engineLabel} ✓`);
+        showToast(`✅ ${engineLabel} kết nối thành công!`);
+      } else {
+        updateTTSStatus('error', `❌ ${engineLabel} lỗi`);
+        showToast(`❌ ${engineLabel}: ${errorMsg}. Chuyển về Browser voice.`, 'error');
+        revertToBrowser();
+      }
+    } catch (e) {
+      // Network error
+      updateTTSStatus('error', `❌ Mất kết nối`);
+      showToast(`❌ Không thể kết nối ${engineLabel} — kiểm tra mạng. Chuyển về Browser voice.`, 'error');
+      revertToBrowser();
+    }
+  }
+
+  function revertToBrowser() {
+    ttsEngine = 'browser';
+    localStorage.setItem('ttsEngine', 'browser');
+    const engineSelect = document.getElementById('ttsEngineSelect');
+    if (engineSelect) engineSelect.value = 'browser';
+    loadVoices();
+    updateSpeakerVoiceConfig();
   }
 
   function changeLanguage(language) {
@@ -2354,17 +2460,19 @@ JSON format:
       }
     };
 
-    if (ttsEngine === 'elevenlabs' && getElevenLabsKey()) {
+    if (ttsEngine === 'elevenlabs') {
+      if (!getElevenLabsKey()) { onEnd(); showToast('❌ Chưa cấu hình ElevenLabs API Key', 'error'); return; }
       const elVoice = speaker ? getElevenLabsVoiceForSpeaker(speaker) : undefined;
       elevenLabsFetch(text, elVoice).then(buffer => {
         if (buffer && playAudioBuffer(buffer, onEnd)) return;
-        browserSpeakWithCallback(text, onEnd, speaker);
+        onEnd(); showToast('❌ ElevenLabs TTS lỗi — kiểm tra API key hoặc quota', 'error');
       });
-    } else if (ttsEngine === 'minimax' && getMinimaxKey()) {
+    } else if (ttsEngine === 'minimax') {
+      if (!getMinimaxKey()) { onEnd(); showToast('❌ Chưa cấu hình MiniMax API Key', 'error'); return; }
       const mmVoice = speaker ? getMinimaxVoiceForSpeaker(speaker) : undefined;
       minimaxTtsFetch(text, mmVoice).then(buffer => {
         if (buffer && playAudioBuffer(buffer, onEnd)) return;
-        browserSpeakWithCallback(text, onEnd, speaker);
+        onEnd(); showToast('❌ MiniMax TTS lỗi — kiểm tra API key hoặc quota', 'error');
       });
     } else {
       browserSpeakWithCallback(text, onEnd, speaker);
@@ -2394,7 +2502,8 @@ JSON format:
     isSpeaking = true;
     updateStopButton(true);
 
-    if (ttsEngine === 'elevenlabs' && getElevenLabsKey()) {
+    if (ttsEngine === 'elevenlabs') {
+      if (!getElevenLabsKey()) { isSpeaking = false; updateStopButton(false); showToast('❌ Chưa cấu hình ElevenLabs API Key', 'error'); return Promise.resolve(); }
       const elVoice = speaker ? getElevenLabsVoiceForSpeaker(speaker) : undefined;
       return elevenLabsFetch(text, elVoice).then(buffer => {
         if (buffer) {
@@ -2402,10 +2511,11 @@ JSON format:
             playAudioBuffer(buffer, () => { isSpeaking = false; updateStopButton(false); setTimeout(resolve, 400); });
           });
         }
-        return browserSpeakAndWait(text, speaker);
+        isSpeaking = false; updateStopButton(false); showToast('❌ ElevenLabs TTS lỗi — kiểm tra API key hoặc quota', 'error');
       });
     }
-    if (ttsEngine === 'minimax' && getMinimaxKey()) {
+    if (ttsEngine === 'minimax') {
+      if (!getMinimaxKey()) { isSpeaking = false; updateStopButton(false); showToast('❌ Chưa cấu hình MiniMax API Key', 'error'); return Promise.resolve(); }
       const mmVoice = speaker ? getMinimaxVoiceForSpeaker(speaker) : undefined;
       return minimaxTtsFetch(text, mmVoice).then(buffer => {
         if (buffer) {
@@ -2413,7 +2523,7 @@ JSON format:
             playAudioBuffer(buffer, () => { isSpeaking = false; updateStopButton(false); setTimeout(resolve, 400); });
           });
         }
-        return browserSpeakAndWait(text, speaker);
+        isSpeaking = false; updateStopButton(false); showToast('❌ MiniMax TTS lỗi — kiểm tra API key hoặc quota', 'error');
       });
     }
     return browserSpeakAndWait(text, speaker);
