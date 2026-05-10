@@ -2119,7 +2119,7 @@ JSON format:
     stopAllSpeech();
     speechRate = parseFloat(val);
     localStorage.setItem('speechRate', speechRate);
-    audioCache.clear(); // Clear cache because speed affects audio
+
   }
 
   function changeTTSEngine(engine) {
@@ -2129,7 +2129,7 @@ JSON format:
 
     ttsEngine = engine;
     localStorage.setItem('ttsEngine', engine);
-    audioCache.clear(); // Clear cache when switching engine
+
     // Update voice list based on engine
     const voiceSelect = document.getElementById('voiceSelect');
     if (engine === 'elevenlabs') {
@@ -2295,16 +2295,13 @@ JSON format:
   document.addEventListener('click', ensureAudioCtx, { once: true });
 
   // --- ElevenLabs TTS (AudioContext-based, iOS Safari compatible) ---
-  const audioCache = new Map(); // cacheKey -> AudioBuffer
+
   let _currentSource = null;
 
   async function elevenLabsFetch(text, overrideVoiceId) {
     const key = getElevenLabsKey();
     const voiceId = overrideVoiceId || getElevenLabsVoice();
     if (!key) return null;
-
-    const cacheKey = `${voiceId}_${text}`;
-    if (audioCache.has(cacheKey)) return audioCache.get(cacheKey);
 
     try {
       const response = await fetch(`${_ttsEndpoint}/${voiceId}`, {
@@ -2321,7 +2318,7 @@ JSON format:
       await ensureAudioCtx();
       const arrayBuffer = await response.arrayBuffer();
       const audioBuffer = await _audioCtx.decodeAudioData(arrayBuffer);
-      audioCache.set(cacheKey, audioBuffer);
+
       return audioBuffer;
     } catch (e) {
       return null;
@@ -2353,9 +2350,6 @@ JSON format:
     if (!key) return null;
 
     const voiceId = overrideVoice || getMinimaxVoice();
-    const cacheKey = `mm_${voiceId}_${speechRate}_${text}`;
-    if (audioCache.has(cacheKey)) return audioCache.get(cacheKey);
-
     try {
       const url = `${_minimaxEndpoint}?GroupId=${_minimaxGroupId}`;
       const response = await fetch(url, {
@@ -2396,7 +2390,7 @@ JSON format:
         bytes[i / 2] = parseInt(hexStr.substring(i, i + 2), 16);
       }
       const audioBuffer = await _audioCtx.decodeAudioData(bytes.buffer);
-      audioCache.set(cacheKey, audioBuffer);
+
       return audioBuffer;
     } catch (e) {
       console.error('[MiniMax TTS] Fetch error:', e);
