@@ -101,14 +101,14 @@
   }
 
   function saveHistoryMeta() {
+    // Only save when logged in (always auto-login, no offline cache needed)
+    if (!window.sync?.auth?.getUser()) return;
     try { localStorage.setItem('dbdHistoryMeta', JSON.stringify(historyMeta)); } catch(e) { /* quota */ }
-    // Push to cloud if logged in (debounced)
-    if (window.sync?.auth?.getUser()) {
-      clearTimeout(saveHistoryMeta._timer);
-      saveHistoryMeta._timer = setTimeout(() => {
-        window.sync?.push?.();
-      }, 3000);
-    }
+    // Push to cloud (debounced)
+    clearTimeout(saveHistoryMeta._timer);
+    saveHistoryMeta._timer = setTimeout(() => {
+      window.sync?.push?.();
+    }, 3000);
   }
 
   function loadHistoryData(index) {
@@ -749,7 +749,7 @@ JSON format:
           timestamp: ts,
           dataKey: dataKey,
         };
-        try { localStorage.setItem(dataKey, JSON.stringify(result)); } catch(e) { /* quota */ }
+        if (window.sync?.auth?.getUser()) { try { localStorage.setItem(dataKey, JSON.stringify(result)); } catch(e) {} }
         currentData._dataKey = dataKey;
         historyMeta.unshift(metaItem);
         while (historyMeta.length > 20) {
@@ -880,7 +880,7 @@ JSON format:
           dataKey: dataKey,
           type: 'news',
         };
-        try { localStorage.setItem(dataKey, JSON.stringify(result)); } catch(e) {}
+        if (window.sync?.auth?.getUser()) { try { localStorage.setItem(dataKey, JSON.stringify(result)); } catch(e) {} }
         currentData._dataKey = dataKey;
         historyMeta.unshift(metaItem);
         while (historyMeta.length > 20) {
@@ -1155,7 +1155,7 @@ JSON format:
         currentData._type = 'tenses';
         const ts = Date.now();
         const dataKey = 'dbdData_' + ts;
-        try { localStorage.setItem(dataKey, JSON.stringify(result)); } catch(e) {}
+        if (window.sync?.auth?.getUser()) { try { localStorage.setItem(dataKey, JSON.stringify(result)); } catch(e) {} }
         currentData._dataKey = dataKey;
         historyMeta.unshift({ command: '/tenses ' + level, title: '⏰ ' + (result.title || 'Tenses'), level: result.level || '', topic: 'Tenses', timestamp: ts, dataKey, type: 'tenses' });
         while (historyMeta.length > 20) { const rm = historyMeta.pop(); if (rm && rm.dataKey) try { localStorage.removeItem(rm.dataKey); } catch(e) {} }
@@ -1360,7 +1360,7 @@ JSON format:
         currentData._type = 'linkwords';
         const ts = Date.now();
         const dataKey = 'dbdData_' + ts;
-        try { localStorage.setItem(dataKey, JSON.stringify(result)); } catch(e) {}
+        if (window.sync?.auth?.getUser()) { try { localStorage.setItem(dataKey, JSON.stringify(result)); } catch(e) {} }
         currentData._dataKey = dataKey;
         historyMeta.unshift({ command: '/linkwords ' + level, title: '🔗 ' + (result.title || 'Link Words'), level: result.level || '', topic: 'Link Words', timestamp: ts, dataKey, type: 'linkwords' });
         while (historyMeta.length > 20) { const rm = historyMeta.pop(); if (rm && rm.dataKey) try { localStorage.removeItem(rm.dataKey); } catch(e) {} }
