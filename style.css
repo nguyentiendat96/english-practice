@@ -185,6 +185,15 @@ button, a, select {
   color: var(--text-muted);
   font-weight: 400;
 }
+.app-version {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--text-muted);
+  opacity: 0.5;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.5px;
+}
 
 /* Voice controls */
 .voice-controls {
