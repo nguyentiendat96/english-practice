@@ -160,6 +160,10 @@
     });
     deferWork(() => {
       initTTS();
+      // Restore speaker count and voice config
+      const countSelect = document.getElementById('speakerCountSelect');
+      if (countSelect) countSelect.value = speakerCount;
+      updateSpeakerVoiceConfig();
     });
     deferWork(() => {
       initSelectionTranslator();
@@ -296,7 +300,8 @@
   const _cfgToken = (window.CONFIG && window.CONFIG.cerebrasToken) || '';
   const _cfgEngine = (window.CONFIG && window.CONFIG.cerebrasEngine) || 'qwen-3-235b-a22b-instruct-2507';
   const _ttsEndpoint = (window.CONFIG && window.CONFIG.elevenlabsEndpoint) || 'https://api.elevenlabs.io/v1/text-to-speech';
-  const _googleTtsEndpoint = (window.CONFIG && window.CONFIG.googleTtsEndpoint) || 'https://texttospeech.googleapis.com/v1/text:synthesize';
+  const _minimaxEndpoint = (window.CONFIG && window.CONFIG.minimaxEndpoint) || 'https://api.minimax.io/v1/t2a_v2';
+  const _minimaxGroupId = (window.CONFIG && window.CONFIG.minimaxGroupId) || '';
 
   // ElevenLabs voices
   const elevenLabsVoices = [
@@ -328,65 +333,138 @@
     // No-op or keep for override
   }
 
-  // --- Google Cloud TTS voices ---
-  const googleVoicesEN = [
-    { name: 'en-US-WaveNet-D', label: 'Guy (Nam) ⭐', gender: 'MALE' },
-    { name: 'en-US-WaveNet-C', label: 'Aria (Nữ) ⭐', gender: 'FEMALE' },
-    { name: 'en-US-WaveNet-A', label: 'Wavenet A (Nam)', gender: 'MALE' },
-    { name: 'en-US-WaveNet-E', label: 'Wavenet E (Nữ)', gender: 'FEMALE' },
-    { name: 'en-US-WaveNet-F', label: 'Wavenet F (Nữ)', gender: 'FEMALE' },
-    { name: 'en-US-WaveNet-B', label: 'Wavenet B (Nam)', gender: 'MALE' },
-    { name: 'en-US-Neural2-D', label: 'Neural2 D (Nam)', gender: 'MALE' },
-    { name: 'en-US-Neural2-C', label: 'Neural2 C (Nữ)', gender: 'FEMALE' },
-    { name: 'en-US-Neural2-A', label: 'Neural2 A (Nam)', gender: 'MALE' },
-    { name: 'en-US-Neural2-F', label: 'Neural2 F (Nữ)', gender: 'FEMALE' },
+  // --- MiniMax TTS voices ---
+  const minimaxVoicesEN = [
+    { id: 'English_expressive_narrator', label: 'Expressive Narrator ⭐', gender: 'MALE' },
+    { id: 'English_radiant_girl', label: 'Radiant Girl ⭐', gender: 'FEMALE' },
+    { id: 'English_magnetic_voiced_man', label: 'Magnetic Man', gender: 'MALE' },
+    { id: 'English_compelling_lady1', label: 'Compelling Lady', gender: 'FEMALE' },
+    { id: 'English_Trustworth_Man', label: 'Trustworthy Man', gender: 'MALE' },
+    { id: 'English_CalmWoman', label: 'Calm Woman', gender: 'FEMALE' },
+    { id: 'English_Gentle-voiced_man', label: 'Gentle Man', gender: 'MALE' },
+    { id: 'English_Graceful_Lady', label: 'Graceful Lady', gender: 'FEMALE' },
+    { id: 'English_ManWithDeepVoice', label: 'Deep Voice Man', gender: 'MALE' },
+    { id: 'English_captivating_female1', label: 'Captivating Female', gender: 'FEMALE' },
+    { id: 'English_Diligent_Man', label: 'Diligent Man', gender: 'MALE' },
+    { id: 'English_Upbeat_Woman', label: 'Upbeat Woman', gender: 'FEMALE' },
+    { id: 'English_Deep-VoicedGentleman', label: 'Deep Gentleman', gender: 'MALE' },
+    { id: 'English_LovelyGirl', label: 'Lovely Girl', gender: 'FEMALE' },
+    { id: 'English_CaptivatingStoryteller', label: 'Storyteller', gender: 'MALE' },
+    { id: 'English_PlayfulGirl', label: 'Playful Girl', gender: 'FEMALE' },
   ];
-  const googleVoicesFR = [
-    { name: 'fr-FR-WaveNet-C', label: 'WaveNet C (Nữ) ⭐', gender: 'FEMALE' },
-    { name: 'fr-FR-WaveNet-D', label: 'WaveNet D (Nam) ⭐', gender: 'MALE' },
-    { name: 'fr-FR-WaveNet-A', label: 'WaveNet A (Nữ)', gender: 'FEMALE' },
-    { name: 'fr-FR-WaveNet-B', label: 'WaveNet B (Nam)', gender: 'MALE' },
-    { name: 'fr-FR-Neural2-A', label: 'Neural2 A (Nữ)', gender: 'FEMALE' },
-    { name: 'fr-FR-Neural2-B', label: 'Neural2 B (Nam)', gender: 'MALE' },
+  const minimaxVoicesFR = [
+    { id: 'French_Male_Gentle', label: 'French Male ⭐', gender: 'MALE' },
+    { id: 'French_Female_Gentle', label: 'French Female ⭐', gender: 'FEMALE' },
+    { id: 'English_expressive_narrator', label: 'Narrator (EN)', gender: 'MALE' },
+    { id: 'English_radiant_girl', label: 'Radiant Girl (EN)', gender: 'FEMALE' },
   ];
-  function getGoogleVoices() {
-    return targetLanguage === 'fr' ? googleVoicesFR : googleVoicesEN;
+  function getMinimaxVoices() {
+    return targetLanguage === 'fr' ? minimaxVoicesFR : minimaxVoicesEN;
   }
-  function getGoogleTtsKey() {
-    return (window.CONFIG && window.CONFIG.googleTtsKey) || '';
+  function getMinimaxKey() {
+    return (window.CONFIG && window.CONFIG.minimaxKey) || '';
   }
-  function getGoogleVoice() {
-    return localStorage.getItem('google_tts_voice') || getGoogleVoices()[0].name;
+  function getMinimaxVoice() {
+    return localStorage.getItem('minimax_voice') || getMinimaxVoices()[0].id;
   }
-  function setGoogleVoice(voiceName) {
-    localStorage.setItem('google_tts_voice', voiceName);
+  function setMinimaxVoice(voiceId) {
+    localStorage.setItem('minimax_voice', voiceId);
   }
 
-  // --- Multi-voice: pick a different voice for each dialogue speaker ---
-  function getVoiceForSpeaker(speaker) {
+  // --- Multi-voice: per-speaker voice assignment ---
+  const speakerLabels = ['A', 'B', 'C', 'D'];
+  const speakerEmojis = { A: '🔵', B: '⚪', C: '🟣', D: '🟢' };
+  let speakerCount = parseInt(localStorage.getItem('speakerCount') || '2', 10);
+  let speakerVoices = JSON.parse(localStorage.getItem('speakerVoices') || '{}');
+
+  function getSpeakerCount() { return speakerCount; }
+
+  function getMinimaxVoiceForSpeaker(speaker) {
     if (!speaker) return null;
-    const selected = getGoogleVoice();
-    const selectedObj = getGoogleVoices().find(v => v.name === selected);
-    if (!selectedObj) return null;
-    // Speaker A uses the selected voice, Speaker B uses opposite gender
-    const isA = (speaker === 'A');
-    if (isA) return selected;
-    // Find a voice with opposite gender from the same list
-    const targetGender = selectedObj.gender === 'MALE' ? 'FEMALE' : 'MALE';
-    const alt = getGoogleVoices().find(v => v.gender === targetGender && v.name !== selected);
-    return alt ? alt.name : selected;
+    // Check per-speaker config first
+    const configKey = `minimax_${speaker}`;
+    if (speakerVoices[configKey]) return speakerVoices[configKey];
+    // Fallback: auto-assign based on gender alternation
+    const voices = getMinimaxVoices();
+    const idx = speakerLabels.indexOf(speaker);
+    if (idx < 0 || voices.length === 0) return getMinimaxVoice();
+    // Alternate genders: even index = first voice, odd = first opposite gender
+    if (idx === 0) return getMinimaxVoice();
+    const selected = getMinimaxVoice();
+    const selectedObj = voices.find(v => v.id === selected);
+    if (!selectedObj) return selected;
+    const targetGender = (idx % 2 === 1) 
+      ? (selectedObj.gender === 'MALE' ? 'FEMALE' : 'MALE') 
+      : selectedObj.gender;
+    const candidates = voices.filter(v => v.gender === targetGender && v.id !== selected);
+    const pick = idx < candidates.length + 1 ? candidates[Math.min(idx - 1, candidates.length - 1)] : candidates[0];
+    return pick ? pick.id : selected;
+  }
+
+  function setSpeakerVoice(speaker, voiceId) {
+    const engine = ttsEngine;
+    speakerVoices[`${engine}_${speaker}`] = voiceId;
+    localStorage.setItem('speakerVoices', JSON.stringify(speakerVoices));
+  }
+
+  function updateSpeakerVoiceConfig() {
+    const countSelect = document.getElementById('speakerCountSelect');
+    if (countSelect) {
+      speakerCount = parseInt(countSelect.value, 10);
+      localStorage.setItem('speakerCount', speakerCount);
+    }
+    const configDiv = document.getElementById('speakerVoiceConfig');
+    const grid = document.getElementById('speakerVoiceGrid');
+    if (!configDiv || !grid) return;
+
+    // Only show voice config for non-browser engines
+    if (ttsEngine === 'browser') {
+      configDiv.style.display = 'none';
+      return;
+    }
+    configDiv.style.display = 'block';
+
+    let voices = [];
+    let getVoiceFn = null;
+    if (ttsEngine === 'minimax') {
+      voices = getMinimaxVoices();
+      getVoiceFn = (sp) => speakerVoices[`minimax_${sp}`] || getMinimaxVoiceForSpeaker(sp);
+    } else if (ttsEngine === 'elevenlabs') {
+      voices = elevenLabsVoices.map(v => ({ id: v.id, label: v.name, gender: v.gender }));
+      getVoiceFn = (sp) => speakerVoices[`elevenlabs_${sp}`] || getElevenLabsVoiceForSpeaker(sp);
+    }
+
+    let html = '';
+    for (let i = 0; i < speakerCount; i++) {
+      const sp = speakerLabels[i];
+      const currentVoice = getVoiceFn(sp);
+      html += `<div class="speaker-voice-item">
+        <span class="speaker-voice-label">${speakerEmojis[sp]} Speaker ${sp}</span>
+        <select class="speaker-voice-select" onchange="app.setSpeakerVoice('${sp}', this.value)">
+          ${voices.map(v => `<option value="${v.id}" ${v.id === currentVoice ? 'selected' : ''}>${v.label}</option>`).join('')}
+        </select>
+      </div>`;
+    }
+    grid.innerHTML = html;
   }
 
   function getElevenLabsVoiceForSpeaker(speaker) {
     if (!speaker) return null;
+    // Check per-speaker config first
+    const configKey = `elevenlabs_${speaker}`;
+    if (speakerVoices[configKey]) return speakerVoices[configKey];
+    // Fallback: auto-assign
     const selected = getElevenLabsVoice();
     const selectedObj = elevenLabsVoices.find(v => v.id === selected);
     if (!selectedObj) return null;
-    const isA = (speaker === 'A');
-    if (isA) return selected;
-    const targetGender = selectedObj.gender === 'MALE' ? 'FEMALE' : 'MALE';
-    const alt = elevenLabsVoices.find(v => v.gender === targetGender && v.id !== selected);
-    return alt ? alt.id : selected;
+    const idx = speakerLabels.indexOf(speaker);
+    if (idx === 0) return selected;
+    const targetGender = (idx % 2 === 1)
+      ? (selectedObj.gender === 'MALE' ? 'FEMALE' : 'MALE')
+      : selectedObj.gender;
+    const candidates = elevenLabsVoices.filter(v => v.gender === targetGender && v.id !== selected);
+    const pick = idx < candidates.length + 1 ? candidates[Math.min(idx - 1, candidates.length - 1)] : candidates[0];
+    return pick ? pick.id : selected;
   }
 
   function getBrowserVoiceForSpeaker(speaker) {
@@ -616,6 +694,8 @@
     const randomSeed = Math.floor(Math.random() * 99999);
     const lang = getLanguage();
 
+    const numSpeakers = getSpeakerCount();
+    const speakerLetters = speakerLabels.slice(0, numSpeakers).join(', ');
     const systemPrompt = `You are "Language DBD", an expert ${lang.teacherName}. Output ONLY valid JSON.
 
 Target language: ${lang.name} (${lang.nativeName})
@@ -628,16 +708,18 @@ Setting: ${randomSetting}
 Mood/Tone: ${randomMood}
 Seed: ${randomSeed}
 
-Create a UNIQUE and CREATIVE dialogue between 2 people with ${turns} turns.
+Create a UNIQUE and CREATIVE dialogue between ${numSpeakers} people (speakers: ${speakerLetters}) with ${turns} turns.
 IMPORTANT: Each dialogue MUST be completely different. Use different character names, different specific situations, different storylines every time. NEVER repeat the same conversation pattern.
-${level.includes('-') ? 'This is a BRIDGING level. Make the dialogue progress from simpler structures to more complex ones, or have Speaker A use the lower level and Speaker B use the higher level.' : ''}
+${numSpeakers > 2 ? `This is a ${numSpeakers}-person conversation. Make sure ALL ${numSpeakers} speakers participate actively and have distinct personalities and speaking styles. Distribute turns naturally among all speakers.` : ''}
+${level.includes('-') ? 'This is a BRIDGING level. Make the dialogue progress from simpler structures to more complex ones.' : ''}
 Each turn MUST be ${sentenceLengthMap[sentenceLength] || sentenceLengthMap['medium']} NEVER write short sentences like "Hi" or "Sure". Each turn should have meaningful content with multiple clauses.
 Bold all verbs with **verb** format. Use connectors appropriate for ${level}.
 ${level === 'B1' ? 'Use intermediate vocabulary: appreciate, opportunity, significant, recommend, eventually, meanwhile, regarding, considerably' : level === 'B2' ? 'Use advanced vocabulary: predominantly, anticipate, comprehensive, elaborate, nevertheless, unprecedented, substantial' : level === 'A2' ? 'Use elementary vocabulary: prefer, suggest, improve, arrange, experience' : 'Use basic vocabulary: want, need, go, eat, buy, like'}
 
+The "speaker" field MUST be one of: ${speakerLetters}. Give each speaker a different name.
+
 JSON format:
 {"title":"...","topic":"${topic}","level":"${level}","language":"${targetLanguage}","dialogue_en":[{"speaker":"A","name":"Name","text":"${lang.dialogueText}"}],"dialogue_vi":[{"speaker":"A","name":"Name","text":"Vietnamese translation"}]}`;
-
     try {
       const content = await callAI(
         systemPrompt,
@@ -1635,7 +1717,8 @@ JSON format:
     const turnChunks = new Array(enLines.length);
     for (let i = 0; i < enLines.length; i++) {
       const line = enLines[i];
-      const speakerClass = (line.speaker || 'A') === 'A' ? 'speaker-a' : 'speaker-b';
+      const spk = (line.speaker || 'A').toUpperCase();
+      const speakerClass = 'speaker-' + spk.toLowerCase();
       const enText = line.text || '';
       const speakerName = line.name || line.speaker || 'Speaker';
       const cleanEn = enText.replace(/\*\*/g, '');
@@ -1685,7 +1768,8 @@ JSON format:
         <div class="dialogue-container" id="dialogueContainer">
           ${viLines.map((viLine, i) => {
       const enLine = enLines[i];
-      const speakerClass = (viLine.speaker || 'A') === 'A' ? 'speaker-a' : 'speaker-b';
+      const spk2 = (viLine.speaker || 'A').toUpperCase();
+      const speakerClass = 'speaker-' + spk2.toLowerCase();
       const viText = (viLine.text || '').replace(/\*\*/g, '');
       const enText = enLine ? (enLine.text || '').replace(/\*\*/g, '') : '';
       const speakerName = viLine.name || viLine.speaker || 'Speaker';
@@ -1901,12 +1985,12 @@ JSON format:
       return;
     }
 
-    // If Google engine is selected, show Google voices
-    if (ttsEngine === 'google') {
-      const gVoices = getGoogleVoices();
-      const savedGV = getGoogleVoice();
-      select.innerHTML = gVoices.map(v =>
-        `<option value="${v.name}" ${v.name === savedGV ? 'selected' : ''}>${v.label}</option>`
+    // If MiniMax engine is selected, show MiniMax voices
+    if (ttsEngine === 'minimax') {
+      const mVoices = getMinimaxVoices();
+      const savedMV = getMinimaxVoice();
+      select.innerHTML = mVoices.map(v =>
+        `<option value="${v.id}" ${v.id === savedMV ? 'selected' : ''}>${v.label}</option>`
       ).join('');
       const speedSlider = document.getElementById('voiceSpeed');
       if (speedSlider) speedSlider.value = speechRate;
@@ -1951,8 +2035,8 @@ JSON format:
     // Update TTS status
     if (ttsEngine === 'elevenlabs') {
       updateTTSStatus('ready', '🎙️ ElevenLabs');
-    } else if (ttsEngine === 'google') {
-      updateTTSStatus('ready', '☁️ Google TTS');
+    } else if (ttsEngine === 'minimax') {
+      updateTTSStatus('ready', '🔮 MiniMax HD');
     } else {
       const count = select.options.length;
       if (count > 0) {
@@ -1999,10 +2083,10 @@ JSON format:
       return;
     }
 
-    if (ttsEngine === 'google') {
-      // Google voice selected
+    if (ttsEngine === 'minimax') {
+      // MiniMax voice selected
       stopAllSpeech();
-      setGoogleVoice(select.value);
+      setMinimaxVoice(select.value);
       speak('Hello!');
       return;
     }
@@ -2050,16 +2134,16 @@ JSON format:
         ).join('');
       }
       updateTTSStatus('ready', '🎙️ ElevenLabs');
-    } else if (engine === 'google') {
-      // Show Google voices
+    } else if (engine === 'minimax') {
+      // Show MiniMax voices
       if (voiceSelect) {
-        const gVoices = getGoogleVoices();
-        const savedGV = getGoogleVoice();
-        voiceSelect.innerHTML = gVoices.map(v =>
-          `<option value="${v.name}" ${v.name === savedGV ? 'selected' : ''}>${v.label}</option>`
+        const mVoices = getMinimaxVoices();
+        const savedMV = getMinimaxVoice();
+        voiceSelect.innerHTML = mVoices.map(v =>
+          `<option value="${v.id}" ${v.id === savedMV ? 'selected' : ''}>${v.label}</option>`
         ).join('');
       }
-      updateTTSStatus('ready', '☁️ Google TTS');
+      updateTTSStatus('ready', '🔮 MiniMax HD');
     } else {
       // Show browser voices
       loadVoices();
@@ -2067,10 +2151,11 @@ JSON format:
 
     const toastMap = {
       elevenlabs: '🎙️ Đã chuyển sang ElevenLabs',
-      google: '☁️ Đã chuyển sang Google Cloud TTS',
+      minimax: '🔮 Đã chuyển sang MiniMax HD TTS',
       browser: '🔊 Đã chuyển sang Browser voice',
     };
     showToast(toastMap[engine] || '🔊 Đã chuyển TTS engine');
+    updateSpeakerVoiceConfig();
   }
 
   function changeLanguage(language) {
@@ -2150,50 +2235,59 @@ JSON format:
     }
   }
 
-  // --- Google Cloud TTS (REST API, AudioContext-based) ---
-  async function googleTtsFetch(text, overrideVoice) {
-    const key = getGoogleTtsKey();
+  // --- MiniMax TTS (REST API, AudioContext-based) ---
+  async function minimaxTtsFetch(text, overrideVoice) {
+    const key = getMinimaxKey();
     if (!key) return null;
 
-    const voiceName = overrideVoice || getGoogleVoice();
-    const langCode = voiceName.substring(0, 5); // e.g. 'en-US' or 'fr-FR'
-    const cacheKey = `g_${voiceName}_${speechRate}_${text}`;
+    const voiceId = overrideVoice || getMinimaxVoice();
+    const cacheKey = `mm_${voiceId}_${speechRate}_${text}`;
     if (audioCache.has(cacheKey)) return audioCache.get(cacheKey);
 
     try {
-      const response = await fetch(`${_googleTtsEndpoint}?key=${key}`, {
+      const url = `${_minimaxEndpoint}?GroupId=${_minimaxGroupId}`;
+      const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Authorization': `Bearer ${key}`,
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          input: { text: text },
-          voice: { languageCode: langCode, name: voiceName },
-          audioConfig: {
-            audioEncoding: 'MP3',
-            speakingRate: speechRate,
+          model: 'speech-02-hd',
+          text: text,
+          voice_setting: {
+            voice_id: voiceId,
+            speed: speechRate,
             pitch: 0,
+            emotion: 'neutral',
           },
+          audio_format: 'mp3',
         }),
       });
       if (!response.ok) {
-        console.error('[Google TTS] Error:', response.status);
+        console.error('[MiniMax TTS] Error:', response.status);
         return null;
       }
 
       const data = await response.json();
-      if (!data.audioContent) return null;
+      if (data.base_resp && data.base_resp.status_code !== 0) {
+        console.error('[MiniMax TTS] API error:', data.base_resp.status_msg);
+        return null;
+      }
+      if (!data.data || !data.data.audio) return null;
 
-      // Decode base64 to ArrayBuffer
+      // Decode hex string to ArrayBuffer
       await ensureAudioCtx();
-      const binaryString = atob(data.audioContent);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+      const hexStr = data.data.audio;
+      const bytes = new Uint8Array(hexStr.length / 2);
+      for (let i = 0; i < hexStr.length; i += 2) {
+        bytes[i / 2] = parseInt(hexStr.substring(i, i + 2), 16);
       }
       const audioBuffer = await _audioCtx.decodeAudioData(bytes.buffer);
       audioCache.set(cacheKey, audioBuffer);
       return audioBuffer;
     } catch (e) {
-      console.error('[Google TTS] Fetch error:', e);
+      console.error('[MiniMax TTS] Fetch error:', e);
       return null;
     }
   }
@@ -2266,9 +2360,9 @@ JSON format:
         if (buffer && playAudioBuffer(buffer, onEnd)) return;
         browserSpeakWithCallback(text, onEnd, speaker);
       });
-    } else if (ttsEngine === 'google' && getGoogleTtsKey()) {
-      const gVoice = speaker ? getVoiceForSpeaker(speaker) : undefined;
-      googleTtsFetch(text, gVoice).then(buffer => {
+    } else if (ttsEngine === 'minimax' && getMinimaxKey()) {
+      const mmVoice = speaker ? getMinimaxVoiceForSpeaker(speaker) : undefined;
+      minimaxTtsFetch(text, mmVoice).then(buffer => {
         if (buffer && playAudioBuffer(buffer, onEnd)) return;
         browserSpeakWithCallback(text, onEnd, speaker);
       });
@@ -2311,9 +2405,9 @@ JSON format:
         return browserSpeakAndWait(text, speaker);
       });
     }
-    if (ttsEngine === 'google' && getGoogleTtsKey()) {
-      const gVoice = speaker ? getVoiceForSpeaker(speaker) : undefined;
-      return googleTtsFetch(text, gVoice).then(buffer => {
+    if (ttsEngine === 'minimax' && getMinimaxKey()) {
+      const mmVoice = speaker ? getMinimaxVoiceForSpeaker(speaker) : undefined;
+      return minimaxTtsFetch(text, mmVoice).then(buffer => {
         if (buffer) {
           return new Promise(resolve => {
             playAudioBuffer(buffer, () => { isSpeaking = false; updateStopButton(false); setTimeout(resolve, 400); });
@@ -3212,6 +3306,8 @@ JSON format:
     switchLessonTab,
     checkExercise,
     checkLinkExercise,
+    updateSpeakerVoiceConfig,
+    setSpeakerVoice,
   };
 
   // --- Start ---
