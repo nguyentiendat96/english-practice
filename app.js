@@ -171,7 +171,13 @@
     // Init cloud sync + auth
     deferWork(async () => {
       await (window.sync?.init?.());
-      const user = window.sync?.auth?.getUser?.();
+      let user = window.sync?.auth?.getUser?.();
+      // Auto-login if no session
+      if (!user && window.sync?.auth?.signIn) {
+        try {
+          user = await window.sync.auth.signIn('nguyentiendatst96@gmail.com', '123456');
+        } catch (e) { /* silent */ }
+      }
       updateUserMenu(user);
       if (user) {
         updateSyncBadge(true);
