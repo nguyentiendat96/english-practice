@@ -302,9 +302,9 @@
   }
 
   // --- runtime config (from config.js) ---
-  const _cfgEndpoint = (window.CONFIG && window.CONFIG.cerebrasEndpoint) || 'https://api.cerebras.ai/v1/chat/completions';
-  const _cfgToken = (window.CONFIG && window.CONFIG.cerebrasToken) || '';
-  const _cfgEngine = (window.CONFIG && window.CONFIG.cerebrasEngine) || 'qwen-3-235b-a22b-instruct-2507';
+  const _cfgEndpoint = (window.CONFIG && window.CONFIG.deepseekEndpoint) || 'https://api.deepseek.com/chat/completions';
+  const _cfgToken = (window.CONFIG && window.CONFIG.deepseekToken) || '';
+  const _cfgEngine = (window.CONFIG && window.CONFIG.deepseekEngine) || 'deepseek-chat';
   const _ttsEndpoint = (window.CONFIG && window.CONFIG.elevenlabsEndpoint) || 'https://api.elevenlabs.io/v1/text-to-speech';
   const _minimaxEndpoint = (window.CONFIG && window.CONFIG.minimaxEndpoint) || 'https://api.minimax.io/v1/t2a_v2';
   const _minimaxGroupId = (window.CONFIG && window.CONFIG.minimaxGroupId) || '';

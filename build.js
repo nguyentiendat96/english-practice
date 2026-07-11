@@ -5,9 +5,9 @@ const fs = require('fs');
 const path = require('path');
 
 const config = {
-  cerebrasEndpoint: process.env.CEREBRAS_ENDPOINT || 'https://api.cerebras.ai/v1/chat/completions',
-  cerebrasToken: process.env.CEREBRAS_TOKEN || '',
-  cerebrasEngine: process.env.CEREBRAS_ENGINE || 'qwen-3-235b-a22b-instruct-2507',
+  deepseekEndpoint: process.env.DEEPSEEK_ENDPOINT || 'https://api.deepseek.com/chat/completions',
+  deepseekToken: process.env.DEEPSEEK_TOKEN || '',
+  deepseekEngine: process.env.DEEPSEEK_ENGINE || 'deepseek-chat',
   elevenlabsEndpoint: process.env.ELEVENLABS_ENDPOINT || 'https://api.elevenlabs.io/v1/text-to-speech',
   elevenlabsKey: process.env.ELEVENLABS_KEY || '',
   minimaxEndpoint: process.env.MINIMAX_ENDPOINT || 'https://api.minimax.io/v1/t2a_v2',

@@ -38,7 +38,7 @@
 | Component | Technology |
 |-----------|------------|
 | Frontend | Vanilla HTML/CSS/JS |
-| AI Engine | Cerebras (LLM) |
+| AI Engine | DeepSeek (LLM) |
 | TTS | ElevenLabs, MiniMax, Browser SpeechSynthesis |
 | Cloud Sync | Supabase (Auth + Database) |
 | Hosting | Vercel |
@@ -54,9 +54,9 @@ Cấu hình trong **Vercel Dashboard → Settings → Environment Variables**:
 
 | Variable | Mô tả |
 |----------|--------|
-| `CEREBRAS_TOKEN` | API key cho Cerebras LLM |
-| `CEREBRAS_ENGINE` | Model ID (vd: `qwen-3-32b`) |
-| `CEREBRAS_ENDPOINT` | API endpoint |
+| `DEEPSEEK_TOKEN` | API key cho DeepSeek LLM |
+| `DEEPSEEK_ENGINE` | Model ID (vd: `deepseek-chat`) |
+| `DEEPSEEK_ENDPOINT` | API endpoint |
 | `ELEVENLABS_KEY` | API key ElevenLabs TTS |
 | `ELEVENLABS_ENDPOINT` | ElevenLabs API endpoint |
 | `MINIMAX_KEY` | API key MiniMax TTS |

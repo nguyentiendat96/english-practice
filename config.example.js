@@ -4,10 +4,10 @@
 // config.js is gitignored - never commit it!
 // ============================================
 window.CONFIG = {
-  // Cerebras AI (https://cloud.cerebras.ai)
-  cerebrasEndpoint: 'https://api.cerebras.ai/v1/chat/completions',
-  cerebrasToken: 'YOUR_CEREBRAS_API_KEY',
-  cerebrasEngine: 'qwen-3-235b-a22b-instruct-2507',
+  // DeepSeek AI (https://api.deepseek.com)
+  deepseekEndpoint: 'https://api.deepseek.com/chat/completions',
+  deepseekToken: 'YOUR_DEEPSEEK_API_KEY',
+  deepseekEngine: 'deepseek-chat',
   
   // ElevenLabs TTS (https://elevenlabs.io) - optional
   elevenlabsEndpoint: 'https://api.elevenlabs.io/v1/text-to-speech',
